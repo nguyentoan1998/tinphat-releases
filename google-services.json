@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "959994767757",
+    "project_id": "tinphatapp-bfce5",
+    "storage_bucket": "tinphatapp-bfce5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:959994767757:android:e0abab243d101ee0e335c4",
+        "android_client_info": {
+          "package_name": "com.stockflow.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "959994767757-la9ske59l0958big2m0fpf0aet4eanug.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDQF6iYmMreueECcIk1u1q8u5kHV9bF0zk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "959994767757-la9ske59l0958big2m0fpf0aet4eanug.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "959994767757-g3iqr5qc1t9dkual24qu85ugq58k3m6a.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.mycompany.tinphat"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
