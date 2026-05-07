@@ -160,8 +160,8 @@ export async function downloadApk(
       }
 
       // Verify file size matches expected size (Requirements 6.4)
-      const fileInfo = await FileSystem.getInfoAsync(result.uri);
-      const actualSize = fileInfo.size ?? 0;
+      const downloadedFileInfo = await FileSystem.getInfoAsync(result.uri);
+      const actualSize = downloadedFileInfo.size ?? 0;
 
       if (actualSize !== expectedSize) {
         // Delete corrupted/incomplete file and report failure
