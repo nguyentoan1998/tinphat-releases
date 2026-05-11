@@ -14,6 +14,8 @@ import GlassButton from '@/components/ui/GlassButton';
 import TinPhatLogo from '@/components/TinPhatLogo';
 import { useDarkDialog } from '@/components/ui/DarkDialog';
 import { Spacing, FontSizes, FontWeights, BorderRadius } from '@/constants/Tokens';
+import Constants from 'expo-constants';
+import * as Application from 'expo-application';
 
 export default function LoginScreen() {
     const router = useRouter();
@@ -120,6 +122,13 @@ export default function LoginScreen() {
                             </Pressable>
                         </Animated.View>
 
+                        {/* Version */}
+                        <Animated.View entering={FadeInUp.duration(600).delay(500)} style={s.versionWrap}>
+                            <Text style={s.versionText}>
+                                v{Application.nativeApplicationVersion ?? Constants.expoConfig?.version ?? '1.0.0'}
+                            </Text>
+                        </Animated.View>
+
                     </ScrollView>
                 </KeyboardAvoidingView>
             </SafeAreaView>
@@ -145,4 +154,6 @@ const s = StyleSheet.create({
     footer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
     footerText: { fontSize: FontSizes.sm, color: '#59677B' },
     footerLink: { fontSize: FontSizes.sm, color: '#0156A7', fontWeight: FontWeights.semibold },
+    versionWrap: { alignItems: 'center', marginTop: Spacing.lg },
+    versionText: { fontSize: FontSizes.xs, color: 'rgba(89, 103, 123, 0.5)' },
 });

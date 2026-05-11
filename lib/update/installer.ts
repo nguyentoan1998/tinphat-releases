@@ -1,43 +1,32 @@
 /**
- * Installer — checks install permission and launches the Android package installer.
+ * Installer — launches the Android package installer for APK installation.
  *
- * Note: expo-intent-launcher is not available in this project.
- * Falls back to Linking.openURL() for APK installation on Android.
+ * Uses expo-intent-launcher to fire the ACTION_VIEW intent with the correct
+ * MIME type, which opens the system package installer directly (not share sheet).
  *
  * Requirements: 4.1, 4.2, 4.3, 5.1
  */
 
-import { Linking, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import * as IntentLauncher from 'expo-intent-launcher';
+import * as FileSystem from 'expo-file-system/legacy';
 import { InstallResult } from './types';
 
 /**
  * Check if the app can install packages.
- *
- * On iOS: always returns false — APK installation is not supported.
- * On Android: always returns true — the system will prompt the user to grant
- *   REQUEST_INSTALL_PACKAGES permission if it has not been granted yet.
+ * On iOS: always false. On Android: always true (system handles permission prompt).
  */
 export function canInstallApk(): boolean {
-  if (Platform.OS === 'ios') {
-    return false;
-  }
-  // On Android, we always return true. The system handles the permission
-  // prompt automatically when the install intent is launched.
-  return true;
+  return Platform.OS === 'android';
 }
 
 /**
- * Install APK from the given file URI.
+ * Install APK from the given file URI using Android package installer.
  *
- * On Android:
- *   Uses Linking.openURL() to open the APK file with the system package installer.
- *   The OS will prompt the user for REQUEST_INSTALL_PACKAGES permission if needed.
+ * Converts the file:// URI to a content:// URI via expo-file-system
+ * (required for Android 7+), then fires ACTION_VIEW with APK MIME type.
  *
- * On iOS:
- *   Returns { type: 'failed', reason: 'APK installation not supported on iOS' }
- *
- * @param fileUri - Local file URI of the downloaded APK
- *                  (e.g. "file:///data/user/0/.../cache/update/app-update.apk")
+ * @param fileUri - Local file URI (e.g. "file:///data/.../cache/update/app-update.apk")
  */
 export async function installApk(fileUri: string): Promise<InstallResult> {
   if (Platform.OS === 'ios') {
@@ -45,22 +34,21 @@ export async function installApk(fileUri: string): Promise<InstallResult> {
   }
 
   try {
-    // Check if the URL can be opened before attempting
-    const canOpen = await Linking.canOpenURL(fileUri);
-    if (!canOpen) {
-      return {
-        type: 'failed',
-        reason: `Cannot open APK file URI: ${fileUri}. Ensure the file exists and the app has storage permissions.`,
-      };
-    }
+    // Convert file:// URI to content:// URI for Android 7+ compatibility
+    const contentUri = await FileSystem.getContentUriAsync(fileUri);
 
-    await Linking.openURL(fileUri);
+    await IntentLauncher.startActivityAsync('android.intent.action.VIEW', {
+      data: contentUri,
+      flags: 1, // FLAG_GRANT_READ_URI_PERMISSION
+      type: 'application/vnd.android.package-archive',
+    });
+
     return { type: 'launched' };
   } catch (err: unknown) {
     const reason =
       err instanceof Error
         ? err.message
-        : `Failed to launch APK installer: ${String(err)}`;
+        : `Không thể mở trình cài đặt: ${String(err)}`;
     return { type: 'failed', reason };
   }
 }

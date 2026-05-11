@@ -118,6 +118,7 @@ export default function AppUpdateManager({ config = DEFAULT_UPDATE_CONFIG }: App
         if (!isUpdateAvailable) return;
         const s = state as { type: 'update_available'; version: string };
         dismissUpdateForSession(s.version);
+        resetToIdle(); // ← ẩn modal ngay sau khi dismiss
     }
 
     return (
