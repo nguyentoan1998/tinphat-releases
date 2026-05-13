@@ -37,13 +37,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: Z:\mobile\package-lock.json
 
       - name: Install Node dependencies
         run: |
           cd Z:\mobile
-          npm ci
+          npm install
 
       - name: Accept Android SDK licenses
         shell: powershell
