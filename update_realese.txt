@@ -1,0 +1,23 @@
+# 1. Commit tất cả thay đổi hiện tại
+git add .
+git commit -m "chore: update app config and release workflow"
+
+# 2. Tăng version + tạo tag
+npm version patch
+
+# 3. Push code + tag
+git push && git push --tags
+
+# 1. Tăng version (patch: 1.0.0→1.0.1 | minor: 1.0.0→1.1.0 | major: 1.0.0→2.0.0)
+npm version patch
+
+# 2. Push code + tag lên GitHub
+git push && git push --tags
+
+
+
+npm version patch --no-git-tag-version
+git add package.json package-lock.json
+git commit -m "chore: bump version to 1.0.1"
+git tag v1.0.1
+git push && git push --tags
