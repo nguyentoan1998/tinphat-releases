@@ -14,20 +14,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          clean: true
-
-      - name: Fresh start (Clean node_modules and android)
-        shell: powershell
-        run: |
-          if (Test-Path "node_modules") { 
-            echo "Deleting node_modules..."
-            Remove-Item -Recurse -Force node_modules 
-          }
-          if (Test-Path "android") { 
-            echo "Deleting android folder..."
-            Remove-Item -Recurse -Force android 
-          }
 
       - name: Setup JDK 17
         uses: actions/setup-java@v4
@@ -103,14 +89,22 @@ jobs:
         shell: powershell
         run: |
           (Get-Content "android\gradle.properties") -replace 'org.gradle.jvmargs=.*', 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=2048m -XX:+HeapDumpOnOutOfMemoryError' | Set-Content "android\gradle.properties"
+          # Disable parallel build to avoid timestamp issues on Windows
+          Add-Content "android\gradle.properties" "`norg.gradle.parallel=false"
+          Add-Content "android\gradle.properties" "`nandroid.enableParallelJsonGen=false"
+          
+      - name: Clean C++ build cache
+        shell: powershell
+        run: |
+          Get-ChildItem -Path "." -Filter ".cxx" -Recurse -Directory -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
+          Start-Sleep -s 5
 
       - name: Build release APK
         shell: powershell
         working-directory: android
         run: |
-          # Đồng bộ timestamp trước khi build để tránh lỗi Ninja "dirty"
-          Get-ChildItem -Path ".." -Recurse | ForEach-Object { (Get-Item $_.FullName).LastWriteTime = Get-Date }
-          
+          # Wait for filesystem to settle
+          Start-Sleep -s 10
           try {
             .\gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a --stacktrace
           } finally {
