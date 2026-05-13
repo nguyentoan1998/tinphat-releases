@@ -50,7 +50,19 @@ jobs:
 
       - name: Run Expo prebuild
         shell: powershell
-        run: npx expo prebuild --platform android --non-interactive
+        run: |
+          if (Test-Path "android") {
+            echo "Cleaning existing android directory..."
+            # Keep some sensitive files if needed, or just clean
+            .\android\gradlew.bat -p android clean
+          }
+          npx expo prebuild --platform android --non-interactive
+
+      - name: Clean native build artifacts
+        shell: powershell
+        run: |
+          Get-ChildItem -Path "android" -Filter ".cxx" -Recurse -Directory | Remove-Item -Recurse -Force
+          if (Test-Path "android\app\build") { Remove-Item -Recurse -Force "android\app\build" }
 
       - name: Decode keystore
         shell: powershell
@@ -74,7 +86,14 @@ jobs:
       - name: Build release APK
         shell: powershell
         working-directory: android
-        run: .\gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a
+        run: |
+          try {
+            .\gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a --stacktrace
+          } finally {
+            if (Test-Path "app\build\reports\problems\problems-report.html") {
+              echo "--- GRADLE PROBLEMS REPORT FOUND ---"
+            }
+          }
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
