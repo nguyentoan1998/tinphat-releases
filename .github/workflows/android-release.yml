@@ -15,7 +15,9 @@ jobs:
       - name: Enable Long Paths
         shell: powershell
         run: |
+          # Bật Long Paths trong Windows và Git
           Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -Force -ErrorAction SilentlyContinue
+          git config --global core.longpaths true
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -31,33 +33,34 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Full Build Process on Virtual Drive
+      - name: Full Build Process on Short Path
         shell: powershell
         env:
           CI: 1
         run: |
-          # 1. Ánh xạ ổ đĩa ảo Z: vào thư mục CHA của repository
-          $repoRoot = $PWD
-          $parent = Split-Path $repoRoot -Parent
-          if (Test-Path "Z:") { subst Z: /D }
-          subst Z: $parent
-          echo "Mapped Z: to $parent"
+          # 1. Tạo thư mục build cực ngắn trên ổ C: để tránh lỗi 260 ký tự
+          $shortPath = "C:\b"
+          if (Test-Path $shortPath) { 
+            echo "Cleaning old build directory..."
+            Remove-Item -Recurse -Force $shortPath -ErrorAction SilentlyContinue 
+          }
+          New-Item -ItemType Directory -Path $shortPath -Force
           
-          # Di chuyển vào ổ Z: và tìm thư mục dự án
-          $repoLeaf = Split-Path $repoRoot -Leaf
-          z:
-          cd $repoLeaf
+          # 2. Copy code vào thư mục ngắn (dùng robocopy cho nhanh và ổn định)
+          echo "Copying code to $shortPath..."
+          robocopy . $shortPath /E /NFL /NDL /NJH /NJS /nc /ns /np
+          
+          # 3. Di chuyển vào thư mục ngắn
+          cd $shortPath
           if (Test-Path "mobile") { cd mobile }
-          
           echo "Current Directory: $PWD"
-          dir
 
           try {
-            # 2. Cài đặt dependencies
+            # 4. Cài đặt dependencies
             echo "Installing dependencies..."
             npm install
 
-            # 3. Chấp nhận licenses SDK
+            # 5. Chấp nhận licenses SDK
             $sdkPath = "$env:LOCALAPPDATA\Android\Sdk"
             if (-not (Test-Path $sdkPath)) { $sdkPath = "C:\Users\PC\AppData\Local\Android\Sdk" }
             $licensesPath = "$sdkPath\licenses"
@@ -66,11 +69,11 @@ jobs:
             Set-Content "$licensesPath\android-sdk-preview-license" "`n84831b9409646a918e30573bab4c9c91346d8abd"
             Set-Content "$licensesPath\android-ndk-license" "`n592f34765d104ee6b4b9b44b8aea9fcb3170e17"
 
-            # 4. Expo Prebuild
+            # 6. Expo Prebuild
             echo "Running Expo Prebuild..."
             npx expo prebuild --platform android --non-interactive
 
-            # 5. Cấu hình Signing và Build
+            # 7. Cấu hình Signing và Build
             if (-not (Test-Path "android")) { throw "Android directory not found!" }
             cd android
             
@@ -97,14 +100,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release-apk
-          path: Z:/**/android/app/build/outputs/apk/release/tinphatapp.apk
+          path: C:/b/**/android/app/build/outputs/apk/release/tinphatapp.apk
           retention-days: 7
-
-      - name: Cleanup SUBST
-        if: always()
-        shell: powershell
-        run: |
-          if (Test-Path "Z:") { subst Z: /D }
 
   release:
     name: Create GitHub Release

@@ -27,7 +27,7 @@ git tag -l | xargs git tag -d
 
 git tag -d v1.0.0 v1.0.1 v1.0.2 v1.0.5
 
- git push origin --delete v1.0.0 v1.0.1 v1.0.2 v1.0.5
+git push origin --delete v1.0.0 v1.0.1 v1.0.2 v1.0.5
 
 # Xóa các tag trên GitHub (Nếu bạn dùng Windows PowerShell, hãy chạy từng lệnh push --delete)
 git push origin --delete v1.0.1
@@ -40,6 +40,11 @@ git add .
 git commit -m "chore: reset version to 1.0.0 and fix build config"
 git push
 
+git tag v1.0.0
+git push origin v1.0.0
+
+git push origin --delete v1.0.0
+git tag -d v1.0.0
 git tag v1.0.0
 git push origin v1.0.0
 
