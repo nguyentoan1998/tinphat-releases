@@ -93,31 +93,32 @@ jobs:
           Add-Content "android\gradle.properties" "`norg.gradle.parallel=false"
           Add-Content "android\gradle.properties" "`nandroid.enableParallelJsonGen=false"
           
-      - name: Clean C++ build cache
-        shell: powershell
-        run: |
-          Get-ChildItem -Path "." -Filter ".cxx" -Recurse -Directory -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
-          Start-Sleep -s 5
-
       - name: Build release APK
         shell: powershell
-        working-directory: android
         run: |
-          # Wait for filesystem to settle
-          Start-Sleep -s 10
+          # Dùng SUBST để ánh xạ đường dẫn hiện tại vào ổ Z: (loại bỏ khoảng trắng và rút ngắn đường dẫn)
+          if (Test-Path "Z:") { subst Z: /D }
+          subst Z: $PWD
+          
+          cd Z:\mobile\android
+          
+          # Tắt build song song và dọn dẹp cache native
+          (Get-Content "gradle.properties") -replace 'org.gradle.jvmargs=.*', 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=2048m' | Set-Content "gradle.properties"
+          Add-Content "gradle.properties" "`norg.gradle.parallel=false"
+          Add-Content "gradle.properties" "`nandroid.enableParallelJsonGen=false"
+          
           try {
             .\gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a --stacktrace
           } finally {
-            if (Test-Path "app\build\reports\problems\problems-report.html") {
-              echo "--- GRADLE PROBLEMS REPORT FOUND ---"
-            }
+            # Giải phóng ổ Z: sau khi build xong
+            subst Z: /D
           }
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-apk
-          path: android/app/build/outputs/apk/release/tinphatapp.apk
+          path: mobile/android/app/build/outputs/apk/release/tinphatapp.apk
           retention-days: 7
 
   release:
