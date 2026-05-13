@@ -25,6 +25,10 @@ git push && git push --tags
 # Xóa tất cả tag ở máy local
 git tag -l | xargs git tag -d
 
+git tag -d v1.0.0 v1.0.1 v1.0.2 v1.0.5
+
+ git push origin --delete v1.0.0 v1.0.1 v1.0.2 v1.0.5
+
 # Xóa các tag trên GitHub (Nếu bạn dùng Windows PowerShell, hãy chạy từng lệnh push --delete)
 git push origin --delete v1.0.1
 git push origin --delete v1.0.2

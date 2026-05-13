@@ -12,6 +12,11 @@ jobs:
     runs-on: self-hosted
 
     steps:
+      - name: Enable Long Paths
+        shell: powershell
+        run: |
+          Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -Force -ErrorAction SilentlyContinue
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -44,70 +49,41 @@ jobs:
         shell: powershell
         run: |
           $sdkPath = "$env:LOCALAPPDATA\Android\Sdk"
+          if (-not (Test-Path $sdkPath)) { $sdkPath = "C:\Users\PC\AppData\Local\Android\Sdk" }
           $licensesPath = "$sdkPath\licenses"
           New-Item -ItemType Directory -Force -Path $licensesPath | Out-Null
           Set-Content "$licensesPath\android-sdk-license" "`n24333f8a63b6825ea9c5514f83c2829b004d1fee`n8933bad161af4178b1185d1a37fbf41ea5269c55`nd56f5187479451eabf01fb78af6dfcb131a6481e"
           Set-Content "$licensesPath\android-sdk-preview-license" "`n84831b9409646a918e30573bab4c9c91346d8abd"
           Set-Content "$licensesPath\android-ndk-license" "`n592f34765d104ee6b4b9b44b8aea9fcb3170e17"
-          # Also set for WinGet SDK path
-          $sdkPath2 = "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\Google.PlatformTools_Microsoft.Winget.Source_8wekyb3d8bbwe"
-          if (Test-Path $sdkPath2) {
-            $licensesPath2 = "$sdkPath2\licenses"
-            New-Item -ItemType Directory -Force -Path $licensesPath2 | Out-Null
-            Copy-Item "$licensesPath\*" $licensesPath2 -Force
-          }
 
       - name: Run Expo prebuild
         shell: powershell
         run: |
           cd Z:\mobile
-          if (Test-Path "android") {
-            echo "Cleaning existing android directory..."
-            .\android\gradlew.bat -p android clean
-          }
           npx expo prebuild --platform android --non-interactive
 
-      - name: Clean native build artifacts
-        shell: powershell
-        run: |
-          cd Z:\mobile
-          Get-ChildItem -Path "." -Filter ".cxx" -Recurse -Directory -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
-          if (Test-Path "android\app\build") { Remove-Item -Recurse -Force "android\app\build" }
-          Get-ChildItem -Path "." -Filter "CMakeFiles" -Recurse -Directory -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
-          Get-ChildItem -Path "." -Filter "CMakeCache.txt" -Recurse -File -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
-
-      - name: Decode keystore
-        shell: powershell
-        run: |
-          cd Z:\mobile
-          $bytes = [Convert]::FromBase64String("${{ secrets.KEYSTORE_BASE64 }}")
-          [IO.File]::WriteAllBytes("android\app\release.keystore", $bytes)
-
-      - name: Configure Gradle signing properties
-        shell: powershell
-        run: |
-          cd Z:\mobile
-          Add-Content "android\gradle.properties" "`nMYAPP_RELEASE_STORE_FILE=release.keystore"
-          Add-Content "android\gradle.properties" "`nMYAPP_RELEASE_KEY_ALIAS=${{ secrets.KEY_ALIAS }}"
-          Add-Content "android\gradle.properties" "`nMYAPP_RELEASE_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}"
-          Add-Content "android\gradle.properties" "`nMYAPP_RELEASE_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}"
-
-      - name: Increase Gradle JVM memory
-        shell: powershell
-        run: |
-          cd Z:\mobile
-          (Get-Content "android\gradle.properties") -replace 'org.gradle.jvmargs=.*', 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=2048m -XX:+HeapDumpOnOutOfMemoryError' | Set-Content "android\gradle.properties"
-          Add-Content "android\gradle.properties" "`norg.gradle.parallel=false"
-          Add-Content "android\gradle.properties" "`nandroid.enableParallelJsonGen=false"
-          
       - name: Build release APK
         shell: powershell
         run: |
           cd Z:\mobile\android
+          
+          # Cấu hình Gradle Signing ngay tại đây để đảm bảo an toàn
+          $keystoreBytes = [Convert]::FromBase64String("${{ secrets.KEYSTORE_BASE64 }}")
+          [IO.File]::WriteAllBytes("app\release.keystore", $keystoreBytes)
+          
+          Add-Content "gradle.properties" "`nMYAPP_RELEASE_STORE_FILE=release.keystore"
+          Add-Content "gradle.properties" "`nMYAPP_RELEASE_KEY_ALIAS=${{ secrets.KEY_ALIAS }}"
+          Add-Content "gradle.properties" "`nMYAPP_RELEASE_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}"
+          Add-Content "gradle.properties" "`nMYAPP_RELEASE_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}"
+          
+          # Tăng memory và tắt build song song để tránh lỗi Ninja
+          (Get-Content "gradle.properties") -replace 'org.gradle.jvmargs=.*', 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=2048m' | Set-Content "gradle.properties"
+          Add-Content "gradle.properties" "`norg.gradle.parallel=false"
+          
           try {
             .\gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a --stacktrace
           } finally {
-            # Release drive at the end of the job if needed
+            # Giữ nguyên ổ Z cho đến hết job
           }
 
       - name: Upload APK artifact
