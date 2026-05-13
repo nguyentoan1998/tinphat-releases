@@ -33,29 +33,30 @@ jobs:
 
       - name: Full Build Process on Virtual Drive
         shell: powershell
+        env:
+          CI: 1
         run: |
-          # 1. Ánh xạ ổ đĩa ảo Z: vào thư mục gốc của repository
+          # 1. Ánh xạ ổ đĩa ảo Z: TRỰC TIẾP vào thư mục mobile
           if (Test-Path "Z:") { subst Z: /D }
-          subst Z: $PWD
-          echo "Workspace mapped to Z:\"
           
-          # Kiểm tra cấu trúc ổ Z
-          dir Z:\
+          $mobilePath = "$PWD\mobile"
+          if (-not (Test-Path $mobilePath)) { $mobilePath = "$PWD" }
+          
+          subst Z: $mobilePath
+          echo "Mapped Z: to $mobilePath"
+          
+          # Di chuyển vào ổ Z: (Bây giờ Z:\ chính là thư mục chứa package.json)
+          z:
+          cd \
+          echo "Current Directory: $PWD"
+          dir
 
           try {
-            # 2. Xác định thư mục chứa code mobile (nếu repository có thư mục mobile thì vào đó, không thì ở gốc)
-            if (Test-Path "Z:\mobile") { 
-                cd Z:\mobile 
-            } else {
-                cd Z:\
-            }
-            echo "Current Directory: $PWD"
-
-            # 3. Cài đặt dependencies
+            # 2. Cài đặt dependencies
             echo "Installing dependencies..."
             npm install
 
-            # 4. Chấp nhận licenses SDK
+            # 3. Chấp nhận licenses SDK
             $sdkPath = "$env:LOCALAPPDATA\Android\Sdk"
             if (-not (Test-Path $sdkPath)) { $sdkPath = "C:\Users\PC\AppData\Local\Android\Sdk" }
             $licensesPath = "$sdkPath\licenses"
@@ -64,20 +65,23 @@ jobs:
             Set-Content "$licensesPath\android-sdk-preview-license" "`n84831b9409646a918e30573bab4c9c91346d8abd"
             Set-Content "$licensesPath\android-ndk-license" "`n592f34765d104ee6b4b9b44b8aea9fcb3170e17"
 
-            # 5. Expo Prebuild
+            # 4. Expo Prebuild (với CI=1)
             echo "Running Expo Prebuild..."
             npx expo prebuild --platform android --non-interactive
 
-            # 6. Cấu hình Signing và Build
+            # 5. Cấu hình Signing và Build
+            if (-not (Test-Path "android")) { throw "Android directory not found after prebuild!" }
             cd android
+            
             echo "Configuring Signing..."
             $keystoreBytes = [Convert]::FromBase64String("${{ secrets.KEYSTORE_BASE64 }}")
             [IO.File]::WriteAllBytes("app\release.keystore", $keystoreBytes)
             
+            # Ghi trực tiếp vào file gradle.properties trong thư mục android hiện tại
             Add-Content "gradle.properties" "`nMYAPP_RELEASE_STORE_FILE=release.keystore"
             Add-Content "gradle.properties" "`nMYAPP_RELEASE_KEY_ALIAS=${{ secrets.KEY_ALIAS }}"
-            Add-Content "android\gradle.properties" "`nMYAPP_RELEASE_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}"
-            Add-Content "android\gradle.properties" "`nMYAPP_RELEASE_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}"
+            Add-Content "gradle.properties" "`nMYAPP_RELEASE_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}"
+            Add-Content "gradle.properties" "`nMYAPP_RELEASE_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}"
             
             (Get-Content "gradle.properties") -replace 'org.gradle.jvmargs=.*', 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=2048m' | Set-Content "gradle.properties"
             Add-Content "gradle.properties" "`norg.gradle.parallel=false"
@@ -86,14 +90,14 @@ jobs:
             .\gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a --stacktrace
 
           } finally {
-            # Giải phóng ổ Z sẽ được thực hiện ở step Cleanup sau
+            # Giữ nguyên để step sau upload
           }
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-apk
-          path: Z:/**/android/app/build/outputs/apk/release/tinphatapp.apk
+          path: Z:/android/app/build/outputs/apk/release/tinphatapp.apk
           retention-days: 7
 
       - name: Cleanup SUBST
