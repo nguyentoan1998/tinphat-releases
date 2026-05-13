@@ -43,3 +43,7 @@ yarn-error.*
 /ios
 # sensitive files
 secrets.txt
+
+# GitHub Actions Runner
+actions-runner/
+_work/
