@@ -7,15 +7,16 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build Release APK
+  build-and-release:
+    name: Build and Release APK
     runs-on: self-hosted
+    permissions:
+      contents: write
 
     steps:
       - name: Enable Long Paths
         shell: powershell
         run: |
-          # Bật Long Paths trong Windows và Git
           Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -Force -ErrorAction SilentlyContinue
           git config --global core.longpaths true
 
@@ -33,34 +34,26 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Full Build Process on Short Path
+      - name: Full Build Process
         shell: powershell
         env:
           CI: 1
         run: |
-          # 1. Tạo thư mục build cực ngắn trên ổ C: để tránh lỗi 260 ký tự
+          # 1. Tạo thư mục build ngắn trên ổ C:
           $shortPath = "C:\b"
-          if (Test-Path $shortPath) { 
-            echo "Cleaning old build directory..."
-            Remove-Item -Recurse -Force $shortPath -ErrorAction SilentlyContinue 
-          }
+          if (Test-Path $shortPath) { Remove-Item -Recurse -Force $shortPath -ErrorAction SilentlyContinue }
           New-Item -ItemType Directory -Path $shortPath -Force
           
-          # 2. Copy code vào thư mục ngắn (dùng robocopy cho nhanh và ổn định)
-          echo "Copying code to $shortPath..."
+          # 2. Copy code
           robocopy . $shortPath /E /NFL /NDL /NJH /NJS /nc /ns /np
           
-          # 3. Di chuyển vào thư mục ngắn
           cd $shortPath
           if (Test-Path "mobile") { cd mobile }
-          echo "Current Directory: $PWD"
 
           try {
-            # 4. Cài đặt dependencies
-            echo "Installing dependencies..."
+            # 3. Install & Prebuild
             npm install
-
-            # 5. Chấp nhận licenses SDK
+            
             $sdkPath = "$env:LOCALAPPDATA\Android\Sdk"
             if (-not (Test-Path $sdkPath)) { $sdkPath = "C:\Users\PC\AppData\Local\Android\Sdk" }
             $licensesPath = "$sdkPath\licenses"
@@ -69,15 +62,10 @@ jobs:
             Set-Content "$licensesPath\android-sdk-preview-license" "`n84831b9409646a918e30573bab4c9c91346d8abd"
             Set-Content "$licensesPath\android-ndk-license" "`n592f34765d104ee6b4b9b44b8aea9fcb3170e17"
 
-            # 6. Expo Prebuild
-            echo "Running Expo Prebuild..."
             npx expo prebuild --platform android --non-interactive
 
-            # 7. Cấu hình Signing và Build
-            if (-not (Test-Path "android")) { throw "Android directory not found!" }
+            # 4. Build
             cd android
-            
-            echo "Configuring Signing..."
             $keystoreBytes = [Convert]::FromBase64String("${{ secrets.KEYSTORE_BASE64 }}")
             [IO.File]::WriteAllBytes("app\release.keystore", $keystoreBytes)
             
@@ -89,36 +77,14 @@ jobs:
             (Get-Content "gradle.properties") -replace 'org.gradle.jvmargs=.*', 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=2048m' | Set-Content "gradle.properties"
             Add-Content "gradle.properties" "`norg.gradle.parallel=false"
 
-            echo "Starting Gradle Build..."
-            .\gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a --stacktrace
+            .\gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a
+            
+            # 5. Copy APK ngược lại workspace để Release
+            copy "app\build\outputs\apk\release\tinphatapp.apk" "$env:GITHUB_WORKSPACE\tinphatapp.apk"
 
           } finally {
-            # Giữ nguyên để step sau upload
+            # Cleanup optionally
           }
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-apk
-          path: C:/b/**/android/app/build/outputs/apk/release/tinphatapp.apk
-          retention-days: 7
-
-  release:
-    name: Create GitHub Release
-    needs: build
-    runs-on: self-hosted
-
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download APK artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: release-apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -126,8 +92,6 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           generate_release_notes: true
-          draft: false
-          prerelease: false
           files: tinphatapp.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
