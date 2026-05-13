@@ -61,8 +61,15 @@ jobs:
       - name: Clean native build artifacts
         shell: powershell
         run: |
-          Get-ChildItem -Path "android" -Filter ".cxx" -Recurse -Directory | Remove-Item -Recurse -Force
+          # Xóa sạch .cxx ở TOÀN BỘ thư mục (bao gồm cả trong node_modules)
+          Get-ChildItem -Path "." -Filter ".cxx" -Recurse -Directory -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
+          
+          # Xóa thư mục build của android
           if (Test-Path "android\app\build") { Remove-Item -Recurse -Force "android\app\build" }
+          
+          # Xóa các file build tạm của Ninja/CMake nếu có
+          Get-ChildItem -Path "." -Filter "CMakeFiles" -Recurse -Directory -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
+          Get-ChildItem -Path "." -Filter "CMakeCache.txt" -Recurse -File -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force
 
       - name: Decode keystore
         shell: powershell
