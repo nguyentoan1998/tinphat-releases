@@ -36,18 +36,19 @@ jobs:
         env:
           CI: 1
         run: |
-          # 1. Ánh xạ ổ đĩa ảo Z: TRỰC TIẾP vào thư mục mobile
+          # 1. Ánh xạ ổ đĩa ảo Z: vào thư mục CHA của repository
+          $repoRoot = $PWD
+          $parent = Split-Path $repoRoot -Parent
           if (Test-Path "Z:") { subst Z: /D }
+          subst Z: $parent
+          echo "Mapped Z: to $parent"
           
-          $mobilePath = "$PWD\mobile"
-          if (-not (Test-Path $mobilePath)) { $mobilePath = "$PWD" }
-          
-          subst Z: $mobilePath
-          echo "Mapped Z: to $mobilePath"
-          
-          # Di chuyển vào ổ Z: (Bây giờ Z:\ chính là thư mục chứa package.json)
+          # Di chuyển vào ổ Z: và tìm thư mục dự án
+          $repoLeaf = Split-Path $repoRoot -Leaf
           z:
-          cd \
+          cd $repoLeaf
+          if (Test-Path "mobile") { cd mobile }
+          
           echo "Current Directory: $PWD"
           dir
 
@@ -65,19 +66,18 @@ jobs:
             Set-Content "$licensesPath\android-sdk-preview-license" "`n84831b9409646a918e30573bab4c9c91346d8abd"
             Set-Content "$licensesPath\android-ndk-license" "`n592f34765d104ee6b4b9b44b8aea9fcb3170e17"
 
-            # 4. Expo Prebuild (với CI=1)
+            # 4. Expo Prebuild
             echo "Running Expo Prebuild..."
             npx expo prebuild --platform android --non-interactive
 
             # 5. Cấu hình Signing và Build
-            if (-not (Test-Path "android")) { throw "Android directory not found after prebuild!" }
+            if (-not (Test-Path "android")) { throw "Android directory not found!" }
             cd android
             
             echo "Configuring Signing..."
             $keystoreBytes = [Convert]::FromBase64String("${{ secrets.KEYSTORE_BASE64 }}")
             [IO.File]::WriteAllBytes("app\release.keystore", $keystoreBytes)
             
-            # Ghi trực tiếp vào file gradle.properties trong thư mục android hiện tại
             Add-Content "gradle.properties" "`nMYAPP_RELEASE_STORE_FILE=release.keystore"
             Add-Content "gradle.properties" "`nMYAPP_RELEASE_KEY_ALIAS=${{ secrets.KEY_ALIAS }}"
             Add-Content "gradle.properties" "`nMYAPP_RELEASE_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}"
@@ -97,7 +97,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release-apk
-          path: Z:/android/app/build/outputs/apk/release/tinphatapp.apk
+          path: Z:/**/android/app/build/outputs/apk/release/tinphatapp.apk
           retention-days: 7
 
       - name: Cleanup SUBST
