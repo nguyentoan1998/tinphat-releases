@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     name: Build Release APK
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout repository
@@ -32,51 +32,61 @@ jobs:
         run: npm ci
 
       - name: Accept Android SDK licenses
+        shell: powershell
         run: |
-          mkdir -p $ANDROID_SDK_ROOT/licenses
-          echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee\n8933bad161af4178b1185d1a37fbf41ea5269c55\nd56f5187479451eabf01fb78af6dfcb131a6481e" > $ANDROID_SDK_ROOT/licenses/android-sdk-license
-          echo -e "\n84831b9409646a918e30573bab4c9c91346d8abd" > $ANDROID_SDK_ROOT/licenses/android-sdk-preview-license
-          echo -e "\n592f34765d104ee6b4b9b44b8aea9fcb3170e17" > $ANDROID_SDK_ROOT/licenses/android-ndk-license
+          $sdkPath = "$env:LOCALAPPDATA\Android\Sdk"
+          $licensesPath = "$sdkPath\licenses"
+          New-Item -ItemType Directory -Force -Path $licensesPath | Out-Null
+          Set-Content "$licensesPath\android-sdk-license" "`n24333f8a63b6825ea9c5514f83c2829b004d1fee`n8933bad161af4178b1185d1a37fbf41ea5269c55`nd56f5187479451eabf01fb78af6dfcb131a6481e"
+          Set-Content "$licensesPath\android-sdk-preview-license" "`n84831b9409646a918e30573bab4c9c91346d8abd"
+          Set-Content "$licensesPath\android-ndk-license" "`n592f34765d104ee6b4b9b44b8aea9fcb3170e17"
+          # Also set for WinGet SDK path
+          $sdkPath2 = "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\Google.PlatformTools_Microsoft.Winget.Source_8wekyb3d8bbwe"
+          if (Test-Path $sdkPath2) {
+            $licensesPath2 = "$sdkPath2\licenses"
+            New-Item -ItemType Directory -Force -Path $licensesPath2 | Out-Null
+            Copy-Item "$licensesPath\*" $licensesPath2 -Force
+          }
 
       - name: Run Expo prebuild
+        shell: powershell
         run: npx expo prebuild --platform android --non-interactive
 
       - name: Decode keystore
+        shell: powershell
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
+          $bytes = [Convert]::FromBase64String("${{ secrets.KEYSTORE_BASE64 }}")
+          [IO.File]::WriteAllBytes("$PWD\android\app\release.keystore", $bytes)
 
       - name: Configure Gradle signing properties
+        shell: powershell
         run: |
-          {
-            echo "MYAPP_RELEASE_STORE_FILE=release.keystore"
-            echo "MYAPP_RELEASE_KEY_ALIAS=${{ secrets.KEY_ALIAS }}"
-            echo "MYAPP_RELEASE_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}"
-            echo "MYAPP_RELEASE_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}"
-          } >> android/gradle.properties
+          Add-Content "android\gradle.properties" "`nMYAPP_RELEASE_STORE_FILE=release.keystore"
+          Add-Content "android\gradle.properties" "`nMYAPP_RELEASE_KEY_ALIAS=${{ secrets.KEY_ALIAS }}"
+          Add-Content "android\gradle.properties" "`nMYAPP_RELEASE_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}"
+          Add-Content "android\gradle.properties" "`nMYAPP_RELEASE_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}"
 
       - name: Increase Gradle JVM memory
+        shell: powershell
         run: |
-          sed -i 's/org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m/' android/gradle.properties
-
-      - name: Make Gradle wrapper executable
-        run: chmod +x android/gradlew
+          (Get-Content "android\gradle.properties") -replace 'org.gradle.jvmargs=.*', 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m' | Set-Content "android\gradle.properties"
 
       - name: Build release APK
+        shell: powershell
         working-directory: android
-        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a
+        run: .\gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-apk
-          # rename-apk-plugin outputs tinphatapp.apk
           path: android/app/build/outputs/apk/release/tinphatapp.apk
           retention-days: 7
 
   release:
     name: Create GitHub Release
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     permissions:
       contents: write
