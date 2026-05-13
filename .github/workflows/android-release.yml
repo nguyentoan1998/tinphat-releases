@@ -69,7 +69,7 @@ jobs:
       - name: Increase Gradle JVM memory
         shell: powershell
         run: |
-          (Get-Content "android\gradle.properties") -replace 'org.gradle.jvmargs=.*', 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m' | Set-Content "android\gradle.properties"
+          (Get-Content "android\gradle.properties") -replace 'org.gradle.jvmargs=.*', 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=2048m -XX:+HeapDumpOnOutOfMemoryError' | Set-Content "android\gradle.properties"
 
       - name: Build release APK
         shell: powershell
