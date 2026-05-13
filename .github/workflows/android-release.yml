@@ -34,18 +34,28 @@ jobs:
       - name: Full Build Process on Virtual Drive
         shell: powershell
         run: |
-          # 1. Ánh xạ ổ đĩa ảo Z:
+          # 1. Ánh xạ ổ đĩa ảo Z: vào thư mục gốc của repository
           if (Test-Path "Z:") { subst Z: /D }
           subst Z: $PWD
           echo "Workspace mapped to Z:\"
+          
+          # Kiểm tra cấu trúc ổ Z
+          dir Z:\
 
           try {
-            # 2. Cài đặt dependencies
-            cd Z:\mobile
+            # 2. Xác định thư mục chứa code mobile (nếu repository có thư mục mobile thì vào đó, không thì ở gốc)
+            if (Test-Path "Z:\mobile") { 
+                cd Z:\mobile 
+            } else {
+                cd Z:\
+            }
+            echo "Current Directory: $PWD"
+
+            # 3. Cài đặt dependencies
             echo "Installing dependencies..."
             npm install
 
-            # 3. Chấp nhận licenses SDK
+            # 4. Chấp nhận licenses SDK
             $sdkPath = "$env:LOCALAPPDATA\Android\Sdk"
             if (-not (Test-Path $sdkPath)) { $sdkPath = "C:\Users\PC\AppData\Local\Android\Sdk" }
             $licensesPath = "$sdkPath\licenses"
@@ -54,11 +64,11 @@ jobs:
             Set-Content "$licensesPath\android-sdk-preview-license" "`n84831b9409646a918e30573bab4c9c91346d8abd"
             Set-Content "$licensesPath\android-ndk-license" "`n592f34765d104ee6b4b9b44b8aea9fcb3170e17"
 
-            # 4. Expo Prebuild
+            # 5. Expo Prebuild
             echo "Running Expo Prebuild..."
             npx expo prebuild --platform android --non-interactive
 
-            # 5. Cấu hình Signing và Build
+            # 6. Cấu hình Signing và Build
             cd android
             echo "Configuring Signing..."
             $keystoreBytes = [Convert]::FromBase64String("${{ secrets.KEYSTORE_BASE64 }}")
@@ -76,15 +86,14 @@ jobs:
             .\gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a --stacktrace
 
           } finally {
-            # Luôn giải phóng ổ Z: dù thành công hay thất bại
-            # subst Z: /D  # Tạm thời comment lại để Upload artifact có thể đọc được file
+            # Giải phóng ổ Z sẽ được thực hiện ở step Cleanup sau
           }
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-apk
-          path: Z:/mobile/android/app/build/outputs/apk/release/tinphatapp.apk
+          path: Z:/**/android/app/build/outputs/apk/release/tinphatapp.apk
           retention-days: 7
 
       - name: Cleanup SUBST
