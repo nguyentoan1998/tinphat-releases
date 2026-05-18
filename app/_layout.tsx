@@ -4,6 +4,8 @@ import { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@/store';
 import AppUpdateManager from '@/components/ui/AppUpdateManager';
+import NotificationToast from '@/components/ui/NotificationToast';
+import { setupNotificationHandler, setupAndroidChannel, addNotificationTapListener, checkInitialNotificationTap } from '@/lib/notification-setup';
 
 // Create QueryClient instance
 const queryClient = new QueryClient({
@@ -19,6 +21,22 @@ function RootLayoutNav() {
     const router = useRouter();
     const segments = useSegments();
     const { isAuthenticated, isLoading } = useAuthStore();
+
+    // Setup notification handler and Android channel
+    useEffect(() => {
+        setupNotificationHandler();
+        setupAndroidChannel();
+
+        const sub = addNotificationTapListener(() => {
+            router.push('/notifications' as any);
+        });
+
+        checkInitialNotificationTap(() => {
+            router.push('/notifications' as any);
+        });
+
+        return () => sub.remove();
+    }, []);
 
     // Navigation based on auth state
     useEffect(() => {
@@ -43,6 +61,7 @@ function RootLayoutNav() {
             {!isLoading && (
                 <AppUpdateManager />
             )}
+            <NotificationToast />
         </>
     );
 }

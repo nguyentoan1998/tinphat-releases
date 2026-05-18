@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInUp, FadeInRight, withSpring, useAnimatedStyle } from 'react-native-reanimated';
 import {
     ChevronLeft, ChevronRight, Search, X,
     CalendarDays, Clock, TrendingUp, Users,
@@ -16,11 +16,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 
-import { Spacing, FontSizes, FontWeights, BorderRadius } from '@/constants/Tokens';
+import { Spacing, FontSizes, FontWeights, BorderRadius, Shadows } from '@/constants/Tokens';
 import { ThemeColors } from '@/constants/ThemeColors';
 import { useAuthStore } from '@/store';
 import { attendanceApi, AttendanceRecord, AttendanceStatus } from '@/lib/attendance-api';
 import { teamApi, Team } from '@/lib/team-api';
+
+import { calculateCong } from '@/utils/attendance';
 
 // ─── Constants ────────────────────────────────────────────────
 
@@ -32,14 +34,11 @@ const STATUS_CONFIG: Record<AttendanceStatus, { label: string; color: string; bg
 };
 
 const DAY_NAMES = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-const HOURS_PER_SHIFT = 9; // 1 cong = 9 gio
 
 function toShift(hours: number): string {
-    if (!hours || hours <= 0) return '';
-    const shifts = hours / HOURS_PER_SHIFT;
-    const rounded = Math.round(shifts * 2) / 2;
-    if (rounded % 1 === 0) return rounded + ' cong';
-    return rounded + ' cong';
+    const cong = calculateCong(hours);
+    if (cong <= 0) return '0.0 công';
+    return cong.toFixed(1) + ' công';
 }
 
 
@@ -58,6 +57,13 @@ function fmtDate(dateStr: string) {
         month:   String(d.getMonth() + 1).padStart(2, '0'),
         weekday: DAY_NAMES[d.getDay()],
     };
+}
+
+function fmtTime(dateStr?: string | null) {
+    if (!dateStr) return '--:--';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '--:--';
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 // Group records by employeeId
@@ -114,13 +120,13 @@ function MonthPicker({ month, year, onChange }: {
     const prev = () => month === 1 ? onChange(12, year - 1) : onChange(month - 1, year);
     const next = () => { if (!isMax) month === 12 ? onChange(1, year + 1) : onChange(month + 1, year); };
     return (
-        <View style={[s.monthPicker, { backgroundColor: colors.inputBg }]}>
+        <View style={s.monthPicker}>
             <Pressable onPress={prev} hitSlop={8} style={s.monthBtn}>
-                <ChevronLeft size={18} color={colors.textSecondary} />
+                <ChevronLeft size={16} color="#59677B" />
             </Pressable>
-            <Text style={[s.monthLabel, { color: colors.textPrimary }]}>T{month}/{year}</Text>
+            <Text style={s.monthLabel}>T{month}/{year}</Text>
             <Pressable onPress={next} hitSlop={8} style={s.monthBtn} disabled={isMax}>
-                <ChevronRight size={18} color={isMax ? colors.textMuted : colors.textSecondary} />
+                <ChevronRight size={16} color={isMax ? '#D1D5DB' : '#59677B'} />
             </Pressable>
         </View>
     );
@@ -141,27 +147,27 @@ function SummaryCard({ groups, month, year }: { groups: EmployeeGroup[]; month: 
         { label: 'Vắng',      value: absent,                     color: '#EF4444' },
         { label: 'Đi muộn',   value: late,                       color: '#F59E0B' },
         { label: 'Nghỉ phép', value: leave,                      color: '#A78BFA' },
-        { label: 'Công chính',  value: toShift(totalHrs),  color: '#FFFFFF' },
+        { label: 'Tổng Công', value: toShift(totalHrs),          color: '#FFFFFF' },
         { label: 'Tăng ca',   value: otHrs > 0 ? otHrs.toFixed(1) + 'h' : '0h',     color: '#FCD34D' },
     ];
     return (
         <Animated.View entering={FadeInDown.duration(450).delay(80).springify().damping(16)} style={s.summaryWrap}>
-            <LinearGradient colors={['#0156A7', '#0284C7', '#38BDF8']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.summaryCard}>
-                <View style={s.sOrb1} /><View style={s.sOrb2} />
+            <View style={s.sOrb1} /><View style={s.sOrb2} />
+            <View style={s.summaryCard}>
                 <View style={s.summaryHeader}>
-                    <CalendarDays size={15} color="rgba(255,255,255,0.8)" />
+                    <CalendarDays size={15} color="#0156A7" />
                     <Text style={s.summaryTitle}>Tháng {month}/{year}</Text>
                     <Text style={s.summaryMeta}>{groups.length} NV · {totalRecords} ngày</Text>
                 </View>
                 <View style={s.statsGrid}>
                     {stats.map(st => (
                         <View key={st.label} style={s.statItem}>
-                            <Text style={[s.statValue, { color: st.color }]}>{st.value}</Text>
+                            <Text style={[s.statValue, { color: st.label === 'Tổng Công' || st.label === 'Tăng ca' ? '#0156A7' : st.color }]}>{st.value}</Text>
                             <Text style={s.statLabel}>{st.label}</Text>
                         </View>
                     ))}
                 </View>
-            </LinearGradient>
+            </View>
         </Animated.View>
     );
 }
@@ -176,13 +182,12 @@ function EmployeeRow({ group, index, onPress }: {
     return (
         <Animated.View entering={FadeInUp.duration(350).delay(index * 40).springify().damping(20)}>
             <Pressable
-                style={({ pressed }) => [s.empRow, { borderColor: colors.cardBorder }, pressed && { opacity: 0.75 }]}
+                style={({ pressed }) => [s.empRow, pressed && { opacity: 0.75 }]}
                 onPress={onPress}
             >
-                <BlurView intensity={16} tint="light" style={StyleSheet.absoluteFill} />
-                <View style={[s.empRowInner, { backgroundColor: colors.cardBg }]}>
+                <View style={s.empRowInner}>
                     {/* Avatar */}
-                    <LinearGradient colors={['#0156A7', '#38BDF8']} style={s.avatar}>
+                    <LinearGradient colors={['#0156A7', '#0284C7']} style={s.avatar}>
                         <Text style={s.avatarText}>{initials}</Text>
                     </LinearGradient>
 
@@ -196,10 +201,26 @@ function EmployeeRow({ group, index, onPress }: {
                         </Text>
                         {/* Mini status pills */}
                         <View style={s.miniPills}>
-                            {group.present > 0  && <View style={[s.pill, { backgroundColor: 'rgba(16,185,129,0.12)' }]}><Text style={[s.pillT, { color: '#10B981' }]}>{group.present}✓</Text></View>}
-                            {group.absent > 0   && <View style={[s.pill, { backgroundColor: 'rgba(239,68,68,0.12)' }]}><Text style={[s.pillT, { color: '#EF4444' }]}>{group.absent}✗</Text></View>}
-                            {group.late > 0     && <View style={[s.pill, { backgroundColor: 'rgba(245,158,11,0.12)' }]}><Text style={[s.pillT, { color: '#F59E0B' }]}>{group.late}⚠</Text></View>}
-                            {group.leave > 0    && <View style={[s.pill, { backgroundColor: 'rgba(99,102,241,0.12)' }]}><Text style={[s.pillT, { color: '#6366F1' }]}>{group.leave}休</Text></View>}
+                            {group.present > 0  && (
+                                <View style={[s.pill, { backgroundColor: 'rgba(16,185,129,0.12)' }]}>
+                                    <Text style={[s.pillT, { color: '#10B981' }]}>{group.present}✓</Text>
+                                </View>
+                            )}
+                            {group.absent > 0   && (
+                                <View style={[s.pill, { backgroundColor: 'rgba(239,68,68,0.12)' }]}>
+                                    <Text style={[s.pillT, { color: '#EF4444' }]}>{group.absent}✗</Text>
+                                </View>
+                            )}
+                            {group.late > 0     && (
+                                <View style={[s.pill, { backgroundColor: 'rgba(245,158,11,0.12)' }]}>
+                                    <Text style={[s.pillT, { color: '#F59E0B' }]}>{group.late}⚠</Text>
+                                </View>
+                            )}
+                            {group.leave > 0    && (
+                                <View style={[s.pill, { backgroundColor: 'rgba(99,102,241,0.12)' }]}>
+                                    <Text style={[s.pillT, { color: '#6366F1' }]}>{group.leave}休</Text>
+                                </View>
+                            )}
                         </View>
                     </View>
 
@@ -207,7 +228,7 @@ function EmployeeRow({ group, index, onPress }: {
                     <View style={s.empRight}>
                         <Text style={[s.empHours, { color: colors.textAccent }]}>{toShift(group.totalHours)}</Text>
                         {group.otHours > 0 && (
-                            <Text style={s.empOT}>+{group.otHours > 0 ? group.otHours.toFixed(1) + 'h' : ''} OT</Text>
+                            <Text style={s.empOT}>+{group.otHours.toFixed(1)}h OT</Text>
                         )}
                         <ChevronRight size={16} color={colors.textMuted} style={{ marginTop: 4 }} />
                     </View>
@@ -239,37 +260,67 @@ function DetailModal({ group, month, year, visible, onClose }: {
                     <View style={s.modalHandle} />
 
                     {/* Header */}
-                    <View style={[s.modalHeader, { borderBottomColor: colors.divider }]}>
-                        <LinearGradient colors={['#0156A7', '#38BDF8']} style={s.modalAvatar}>
-                            <Text style={s.modalAvatarText}>
-                                {group.fullName.split(' ').map((w: string) => w[0]).slice(-2).join('').toUpperCase()}
-                            </Text>
-                        </LinearGradient>
-                        <View style={{ flex: 1 }}>
-                            <Text style={[s.modalName, { color: colors.textPrimary }]} numberOfLines={1}>{group.fullName}</Text>
-                            <Text style={[s.modalMeta, { color: colors.textMuted }]}>
-                                {group.employeeCode}{group.teamName ? ` · ${group.teamName}` : ''} · Tháng {month}/{year}
-                            </Text>
+                    <View style={s.modalHeaderContainer}>
+                        <View style={s.modalHeaderGradient}>
+                            <View style={s.modalHeaderTop}>
+                                <View style={s.modalAvatarContainer}>
+                                    <View style={s.modalAvatarInner}>
+                                        <Text style={s.modalAvatarText}>
+                                            {group.fullName.split(' ').map((w: string) => w[0]).slice(-2).join('').toUpperCase()}
+                                        </Text>
+                                    </View>
+                                </View>
+                                <View style={s.modalHeaderInfo}>
+                                    <Text style={s.modalNameLight} numberOfLines={1}>{group.fullName}</Text>
+                                    <Text style={s.modalMetaLight}>
+                                        {group.employeeCode}{group.teamName ? ` • ${group.teamName}` : ''}
+                                    </Text>
+                                    <View style={s.modalBadge}>
+                                        <CalendarDays size={10} color="#0156A7" />
+                                        <Text style={s.modalBadgeText}>Tháng {month}/{year}</Text>
+                                    </View>
+                                </View>
+                                <Pressable onPress={onClose} style={s.modalCloseLight}>
+                                    <X size={20} color="#212529" />
+                                </Pressable>
+                            </View>
+
+                            <View style={s.modalSummaryGrid}>
+                                {[
+                                    { label: 'Có mặt',   value: group.present,  color: '#10B981' },
+                                    { label: 'Vắng',     value: group.absent,   color: '#EF4444' },
+                                    { label: 'Đi muộn',  value: group.late,     color: '#F59E0B' },
+                                    { label: 'Nghỉ',     value: group.leave,    color: '#A78BFA' },
+                                    { label: 'Tổng Công', value: calculateCong(group.totalHours).toFixed(1), color: '#0156A7' },
+                                ].map((st, idx) => (
+                                    <View key={st.label} style={[s.modalSummaryItem, idx < 4 && s.modalSummaryItemBorder]}>
+                                        <Text style={[s.modalSummaryVal, { color: st.color }]}>{st.value}</Text>
+                                        <Text style={s.modalSummaryLbl}>{st.label}</Text>
+                                    </View>
+                                ))}
+                            </View>
                         </View>
-                        <Pressable onPress={onClose} style={[s.modalClose, { backgroundColor: colors.inputBg }]}>
-                            <X size={18} color={colors.textSecondary} />
-                        </Pressable>
                     </View>
 
-                    {/* Mini summary */}
-                    <View style={[s.modalSummary, { backgroundColor: colors.inputBg }]}>
-                        {[
-                            { label: 'Có mặt',   value: group.present,  color: '#10B981' },
-                            { label: 'Vắng',     value: group.absent,   color: '#EF4444' },
-                            { label: 'Đi muộn',  value: group.late,     color: '#F59E0B' },
-                            { label: 'Nghỉ',     value: group.leave,    color: '#6366F1' },
-                            { label: '',      value: toShift(group.totalHours), color: colors.textAccent },
-                        ].map(st => (
-                            <View key={st.label} style={s.modalStat}>
-                                <Text style={[s.modalStatVal, { color: st.color }]}>{st.value}</Text>
-                                <Text style={[s.modalStatLbl, { color: colors.textMuted }]}>{st.label}</Text>
+                    {/* Calculation Logic Visualization */}
+                    <View style={s.logicSection}>
+                        <View style={[s.logicCard, { backgroundColor: colors.inputBg }]}>
+                            <View style={s.logicIcon}>
+                                <TrendingUp size={16} color={colors.textAccent} />
                             </View>
-                        ))}
+                            <View style={s.logicContent}>
+                                <Text style={[s.logicTitle, { color: colors.textPrimary }]}>Công thức tính công</Text>
+                                <View style={s.formulaRow}>
+                                    <View style={s.formulaPart}>
+                                        <Text style={[s.formulaVal, { color: colors.textAccent }]}>Số giờ</Text>
+                                        <View style={s.formulaLine} />
+                                        <Text style={[s.formulaSub, { color: colors.textMuted }]}>9.0</Text>
+                                    </View>
+                                    <Text style={[s.formulaEqual, { color: colors.textMuted }]}>=</Text>
+                                    <Text style={[s.formulaResult, { color: '#10B981' }]}>Công</Text>
+                                </View>
+                            </View>
+                        </View>
                     </View>
 
                     {/* Daily list */}
@@ -278,49 +329,61 @@ function DetailModal({ group, month, year, visible, onClose }: {
                             <View style={s.modalEmpty}>
                                 <Text style={[s.modalEmptyT, { color: colors.textMuted }]}>Không có dữ liệu</Text>
                             </View>
-                        ) : sorted.map((r, i) => {
-                            const cfg = STATUS_CONFIG[r.status] ?? STATUS_CONFIG.PRESENT;
-                            const StatusIcon = cfg.Icon;
-                            const { day, weekday, month: mo } = fmtDate(r.date);
-                            return (
-                                <View key={r.id} style={[s.dayRow, i < sorted.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.divider }]}>
-                                    {/* Date */}
-                                    <View style={s.dayDate}>
-                                        <Text style={[s.dayNum, { color: colors.textPrimary }]}>{day}/{mo}</Text>
-                                        <Text style={[s.dayWd, { color: colors.textMuted }]}>{weekday}</Text>
-                                    </View>
+                        ) : (
+                            sorted.map((r, i) => {
+                                const cfg = STATUS_CONFIG[r.status] ?? STATUS_CONFIG.PRESENT;
+                                const StatusIcon = cfg.Icon;
+                                const { day, weekday, month: mo } = fmtDate(r.date);
+                                return (
+                                    <View key={r.id} style={[
+                                        s.dayRow, 
+                                        i < sorted.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.divider },
+                                        (r.status === 'ABSENT' || r.status === 'LATE') && { backgroundColor: cfg.bg + '20' }
+                                    ]}>
+                                        {/* Date */}
+                                        <View style={s.dayDate}>
+                                            <Text style={[s.dayNum, { color: colors.textPrimary }]}>{day}/{mo}</Text>
+                                            <Text style={[s.dayWd, { color: colors.textMuted }]}>{weekday}</Text>
+                                        </View>
 
-                                    {/* Status */}
-                                    <View style={[s.dayStatus, { backgroundColor: cfg.bg }]}>
-                                        <StatusIcon size={12} color={cfg.color} strokeWidth={2} />
-                                        <Text style={[s.dayStatusT, { color: cfg.color }]}>{cfg.label}</Text>
-                                    </View>
+                                        {/* Status */}
+                                        <View style={[s.dayStatus, { backgroundColor: cfg.bg }]}>
+                                            <StatusIcon size={12} color={cfg.color} strokeWidth={2} />
+                                            <Text style={[s.dayStatusT, { color: cfg.color }]}>{cfg.label}</Text>
+                                        </View>
 
-                                    {/* Hours: cong + OT */}
-                                    <View style={s.dayHours}>
-                                        {Number(r.workHours) > 0 && (
-                                            <View style={s.hChip}>
-                                                <Clock size={10} color={colors.textMuted} />
-                                                <Text style={[s.hChipT, { color: colors.textMuted }]}>
-                                                    {toShift(Number(r.workHours))}
-                                                    {Number(r.overtimeHours) > 0 ? ' + ' + Number(r.overtimeHours).toFixed(1) + 'h OT' : ''}
-                                                </Text>
+                                        {/* Times */}
+                                        <View style={s.dayTimes}>
+                                            <View style={s.timeItem}>
+                                                <Text style={[s.timeLbl, { color: colors.textMuted }]}>Vào</Text>
+                                                <Text style={[s.timeVal, { color: colors.textPrimary }]}>{fmtTime(r.checkIn)}</Text>
                                             </View>
-                                        )}
-                                    </View>
+                                            <View style={s.timeItem}>
+                                                <Text style={[s.timeLbl, { color: colors.textMuted }]}>Ra</Text>
+                                                <Text style={[s.timeVal, { color: colors.textPrimary }]}>{fmtTime(r.checkOut)}</Text>
+                                            </View>
+                                        </View>
 
-                                    {/* Mark / Note */}
-                                    {(r.mark || r.note) ? (
-                                        <Text style={[s.dayNote, { color: colors.textMuted }]} numberOfLines={1}>
-                                            {r.mark ?? r.note}
-                                        </Text>
-                                    ) : null}
-                                </View>
-                            );
-                        })}
+                                        {/* Hours: cong + OT */}
+                                        <View style={s.dayHours}>
+                                            <Text style={[s.dayCong, { color: colors.textAccent }]}>{toShift(Number(r.workHours))}</Text>
+                                            {Number(r.overtimeHours) > 0 && (
+                                                <Text style={s.dayOT}>+{Number(r.overtimeHours).toFixed(1)}h OT</Text>
+                                            )}
+                                        </View>
+
+                                        {/* Mark / Note (optional) */}
+                                        {(r.mark || r.note) ? (
+                                            <View style={s.dayInfoBtn}>
+                                                <AlertCircle size={14} color={colors.textMuted} />
+                                            </View>
+                                        ) : null}
+                                    </View>
+                                );
+                            })
+                        )}
                         <View style={{ height: 40 }} />
                     </ScrollView>
-                    )}
                 </Animated.View>
             </View>
         </Modal>
@@ -329,6 +392,8 @@ function DetailModal({ group, month, year, visible, onClose }: {
 
 // ─── Main Screen ──────────────────────────────────────────────
 
+type ViewMode = 'PERSONAL' | 'TEAM';
+
 export default function AttendanceScreen() {
     const router = useRouter();
     const { user } = useAuthStore();
@@ -336,6 +401,7 @@ export default function AttendanceScreen() {
     const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
 
     const now = new Date();
+    const [viewMode, setViewMode]         = useState<ViewMode>(isAdmin ? 'TEAM' : 'PERSONAL');
     const [month, setMonth]               = useState(now.getMonth() + 1);
     const [year, setYear]                 = useState(now.getFullYear());
     const [search, setSearch]             = useState('');
@@ -356,15 +422,20 @@ export default function AttendanceScreen() {
         try {
             const { fromDate, toDate } = getMonthRange(year, month);
             const filters: any = { fromDate, toDate, limit: 0 };
-            if (!isAdmin) {
+            
+            // For regular users, always only their own records
+            // For admins/managers, depends on viewMode
+            if (!isAdmin || viewMode === 'PERSONAL') {
                 const empId = (user as any)?.employeeId || user?.id;
                 if (empId) filters.employeeId = empId;
             }
+            // If isAdmin && viewMode === 'TEAM', we fetch all (no employeeId filter)
+
             const res = await attendanceApi.getAttendance(filters);
             setRecords(res.data);
         } catch { setRecords([]); }
         finally { setLoading(false); setRefreshing(false); }
-    }, [year, month, isAdmin, user]);
+    }, [year, month, isAdmin, user, viewMode]);
 
     useEffect(() => { load(); }, [load]);
 
@@ -387,40 +458,59 @@ export default function AttendanceScreen() {
     return (
         <View style={s.root}>
             <StatusBar style="dark" />
-            <LinearGradient colors={colors.gradientColors} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={['#F0F8FF', '#F9F9F9', '#FFFFFF']} style={StyleSheet.absoluteFill} />
 
             <SafeAreaView style={s.safe} edges={['top']}>
                 {/* Header */}
-                <Animated.View entering={FadeInDown.duration(350)} style={s.header}>
-                    <Pressable style={[s.headerBtn, { backgroundColor: colors.inputBg }]}
+                <Animated.View entering={FadeInDown.duration(400).springify().damping(20)} style={s.header}>
+                    <Pressable style={s.headerBtn}
                         onPress={() => router.canGoBack() ? router.back() : router.replace('/home')}>
-                        <ChevronLeft size={22} color={colors.textSecondary} />
+                        <ChevronLeft size={22} color="#212529" />
                     </Pressable>
-                    <Text style={[s.headerTitle, { color: colors.textPrimary }]}>Chấm công</Text>
-                    <MonthPicker month={month} year={year} onChange={(m, y) => { setMonth(m); setYear(y); }} />
+                    <Text style={[s.headerTitle, { color: '#212529' }]}>Chấm công</Text>
+                    <View style={s.monthPickerWrap}>
+                         <MonthPicker month={month} year={year} onChange={(m, y) => { setMonth(m); setYear(y); }} />
+                    </View>
                 </Animated.View>
 
                 {/* Filters */}
                 <Animated.View entering={FadeInDown.duration(350).delay(60)} style={s.filtersWrap}>
-                    <View style={[s.searchBar, { backgroundColor: colors.inputBg, borderColor: colors.cardBorder }]}>
-                            <Search size={15} color={colors.textMuted} />
+                    {isAdmin && (
+                        <View style={s.viewModeToggle}>
+                            <Pressable 
+                                style={[s.toggleBtn, viewMode === 'PERSONAL' && s.toggleBtnActive]} 
+                                onPress={() => setViewMode('PERSONAL')}
+                            >
+                                <Text style={[s.toggleText, viewMode === 'PERSONAL' && s.toggleTextActive]}>Cá nhân</Text>
+                            </Pressable>
+                            <Pressable 
+                                style={[s.toggleBtn, viewMode === 'TEAM' && s.toggleBtnActive]} 
+                                onPress={() => setViewMode('TEAM')}
+                            >
+                                <Text style={[s.toggleText, viewMode === 'TEAM' && s.toggleTextActive]}>Đội nhóm</Text>
+                            </Pressable>
+                        </View>
+                    )}
+
+                    <View style={s.searchBar}>
+                            <Search size={15} color="#9CA3AF" />
                             <TextInput
-                                style={[s.searchInput, { color: colors.textPrimary }]}
+                                style={s.searchInput}
                                 placeholder="Tìm nhân viên..."
-                                placeholderTextColor={colors.textMuted}
+                                placeholderTextColor="#9CA3AF"
                                 value={search}
                                 onChangeText={setSearch}
                             />
                             {search.length > 0 && (
                                 <Pressable onPress={() => setSearch('')} hitSlop={8}>
-                                    <X size={14} color={colors.textMuted} />
+                                    <X size={14} color="#9CA3AF" />
                                 </Pressable>
                             )}
                     </View>
-                    {teams.length > 0 && (
+                    {teams.length > 0 && viewMode === 'TEAM' && (
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
                             <Pressable style={[s.chip, !selectedTeam && s.chipOn]} onPress={() => setSelectedTeam('')}>
-                                <Users size={11} color={!selectedTeam ? '#FFF' : colors.textMuted} />
+                                <Users size={11} color={!selectedTeam ? '#FFFFFF' : '#59677B'} />
                                 <Text style={[s.chipT, !selectedTeam && s.chipTOn]}>Tất cả</Text>
                             </Pressable>
                             {teams.map(t => (
@@ -485,24 +575,30 @@ const s = StyleSheet.create({
     root: { flex: 1 }, safe: { flex: 1 },
 
     // Header
-    header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.xl, paddingTop: Spacing.sm, paddingBottom: Spacing.md, gap: Spacing.sm },
-    headerBtn: { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center' },
+    header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.xl, paddingTop: Spacing.md, paddingBottom: Spacing.md, gap: Spacing.sm, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.05)' },
+    headerBtn: { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF', ...Shadows.small },
     headerTitle: { flex: 1, fontSize: FontSizes.lg, fontWeight: FontWeights.bold },
 
     // Month picker
-    monthPicker: { flexDirection: 'row', alignItems: 'center', borderRadius: BorderRadius.lg, paddingHorizontal: Spacing.sm, paddingVertical: 6, gap: 2 },
-    monthBtn: { padding: 2 },
-    monthLabel: { fontSize: FontSizes.xs, fontWeight: FontWeights.semibold, minWidth: 60, textAlign: 'center' },
+    monthPickerWrap: { borderRadius: BorderRadius.lg, overflow: 'hidden', backgroundColor: '#FFFFFF', ...Shadows.small, borderWidth: 1, borderColor: '#E5E7EB' },
+    monthPicker: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.sm, paddingVertical: 4, gap: 2 },
+    monthBtn: { width: 28, height: 28, justifyContent: 'center', alignItems: 'center' },
+    monthLabel: { fontSize: 13, fontWeight: FontWeights.bold, minWidth: 60, textAlign: 'center', color: '#212529' },
 
     // Filters
     filtersWrap: { paddingHorizontal: Spacing.xl, gap: Spacing.sm, marginBottom: Spacing.sm },
-    searchBar: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.md, paddingVertical: 10, borderRadius: BorderRadius.lg, borderWidth: 1 },
-    searchInput: { flex: 1, fontSize: FontSizes.sm, padding: 0 },
+    viewModeToggle: { flexDirection: 'row', padding: 3, borderRadius: 20, marginBottom: 4, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB', ...Shadows.small },
+    toggleBtn: { flex: 1, paddingVertical: 6, alignItems: 'center', borderRadius: 18 },
+    toggleBtnActive: { backgroundColor: '#0156A7' },
+    toggleText: { fontSize: 11, fontWeight: FontWeights.medium, color: '#59677B' },
+    toggleTextActive: { color: '#FFFFFF', fontWeight: FontWeights.bold },
+    searchBar: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.md, paddingVertical: 10, borderRadius: BorderRadius.lg, borderWidth: 1, backgroundColor: '#FFFFFF', borderColor: '#E5E7EB', ...Shadows.small },
+    searchInput: { flex: 1, fontSize: FontSizes.sm, padding: 0, color: '#212529' },
     chips: { flexDirection: 'row', gap: Spacing.sm, paddingVertical: 2 },
-    chip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: BorderRadius.full, backgroundColor: 'rgba(0,0,0,0.05)', borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)' },
+    chip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 8, borderRadius: BorderRadius.full, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB', ...Shadows.small },
     chipOn: { backgroundColor: '#0156A7', borderColor: '#0156A7' },
-    chipT: { fontSize: FontSizes.xs, fontWeight: FontWeights.medium, color: '#59677B' },
-    chipTOn: { color: '#FFFFFF' },
+    chipT: { fontSize: 11, fontWeight: FontWeights.medium, color: '#59677B' },
+    chipTOn: { color: '#FFFFFF', fontWeight: FontWeights.bold },
 
     // Loader / empty
     loader: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: Spacing.md },
@@ -515,62 +611,91 @@ const s = StyleSheet.create({
     list: { gap: Spacing.sm },
 
     // Summary card
-    summaryWrap: { borderRadius: BorderRadius.xxl, overflow: 'hidden', shadowColor: '#0156A7', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 6 },
+    summaryWrap: { borderRadius: BorderRadius.xxl, overflow: 'hidden', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB', ...Shadows.medium },
     summaryCard: { padding: Spacing.xl, overflow: 'hidden' },
-    sOrb1: { position: 'absolute', width: 130, height: 130, borderRadius: 65, backgroundColor: 'rgba(255,255,255,0.07)', top: -30, right: -20 },
-    sOrb2: { position: 'absolute', width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255,255,255,0.05)', bottom: -15, left: 40 },
+    sOrb1: { position: 'absolute', width: 130, height: 130, borderRadius: 65, backgroundColor: 'rgba(1,86,167,0.03)', top: -30, right: -20 },
+    sOrb2: { position: 'absolute', width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(1,86,167,0.02)', bottom: -15, left: 40 },
     summaryHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: Spacing.lg },
-    summaryTitle: { flex: 1, fontSize: FontSizes.base, fontWeight: FontWeights.bold, color: '#FFFFFF' },
-    summaryMeta: { fontSize: FontSizes.xs, color: 'rgba(255,255,255,0.7)' },
+    summaryTitle: { flex: 1, fontSize: FontSizes.base, fontWeight: FontWeights.bold, color: '#212529' },
+    summaryMeta: { fontSize: FontSizes.xs, color: '#59677B' },
     statsGrid: { flexDirection: 'row', flexWrap: 'wrap' },
     statItem: { width: '33.33%', alignItems: 'center', paddingVertical: Spacing.sm },
     statValue: { fontSize: FontSizes.xl, fontWeight: FontWeights.extrabold },
-    statLabel: { fontSize: FontSizes.xs, color: 'rgba(255,255,255,0.65)', marginTop: 2 },
+    statLabel: { fontSize: FontSizes.xs, color: '#9CA3AF', marginTop: 2 },
 
     // Employee row
-    empRow: { borderRadius: BorderRadius.lg, overflow: 'hidden', borderWidth: 1 },
+    empRow: { borderRadius: BorderRadius.lg, overflow: 'hidden', borderWidth: 1, backgroundColor: '#FFFFFF', borderColor: '#E5E7EB', ...Shadows.small },
     empRowInner: { flexDirection: 'row', alignItems: 'center', padding: Spacing.md, gap: Spacing.md },
     avatar: { width: 44, height: 44, borderRadius: 13, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
     avatarText: { fontSize: FontSizes.sm, fontWeight: FontWeights.extrabold, color: '#FFF' },
     empInfo: { flex: 1, gap: 3 },
-    empName: { fontSize: FontSizes.sm, fontWeight: FontWeights.semibold },
-    empMeta: { fontSize: FontSizes.xs },
+    empName: { fontSize: FontSizes.sm, fontWeight: FontWeights.bold, color: '#212529' },
+    empMeta: { fontSize: FontSizes.xs, color: '#59677B' },
     miniPills: { flexDirection: 'row', gap: 4, flexWrap: 'wrap' },
     pill: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
     pillT: { fontSize: 10, fontWeight: FontWeights.bold },
     empRight: { alignItems: 'flex-end', gap: 2 },
-    empHours: { fontSize: FontSizes.base, fontWeight: FontWeights.bold },
-    empOT: { fontSize: 10, color: '#F59E0B', fontWeight: FontWeights.medium },
+    empHours: { fontSize: FontSizes.base, fontWeight: FontWeights.bold, color: '#212529' },
+    empOT: { fontSize: 10, color: '#FCD34D', fontWeight: FontWeights.bold },
 
     // Detail modal
     modalOverlay: { flex: 1, justifyContent: 'flex-end' },
-    modalSheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '85%', paddingTop: 12 },
-    modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: 'rgba(0,0,0,0.15)', alignSelf: 'center', marginBottom: 12 },
-    modalHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingHorizontal: Spacing.xl, paddingBottom: Spacing.md, borderBottomWidth: 1 },
-    modalAvatar: { width: 44, height: 44, borderRadius: 13, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
-    modalAvatarText: { fontSize: FontSizes.sm, fontWeight: FontWeights.extrabold, color: '#FFF' },
-    modalName: { fontSize: FontSizes.base, fontWeight: FontWeights.bold },
-    modalMeta: { fontSize: FontSizes.xs, marginTop: 2 },
-    modalClose: { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center' },
-    modalSummary: { flexDirection: 'row', marginHorizontal: Spacing.xl, marginVertical: Spacing.md, borderRadius: BorderRadius.lg, paddingVertical: Spacing.md },
-    modalStat: { flex: 1, alignItems: 'center' },
-    modalStatVal: { fontSize: FontSizes.lg, fontWeight: FontWeights.extrabold },
-    modalStatLbl: { fontSize: 10, marginTop: 2 },
+    modalSheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '90%', overflow: 'hidden', ...Shadows.large },
+    modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#D1D5DB', position: 'absolute', top: 10, zIndex: 10, alignSelf: 'center' },
+    
+    // New Header Styles
+    modalHeaderContainer: { width: '100%' },
+    modalAvatarText: { fontSize: FontSizes.sm, fontWeight: FontWeights.extrabold, color: '#0156A7' },
+    modalHeaderGradient: { paddingTop: 24, paddingBottom: 20, paddingHorizontal: Spacing.xl, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+    modalHeaderTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.xl },
+    modalAvatarContainer: { width: 60, height: 60, borderRadius: 20, backgroundColor: '#F0F8FF', padding: 4 },
+    modalAvatarInner: { flex: 1, borderRadius: 16, backgroundColor: 'rgba(1,86,167,0.1)', justifyContent: 'center', alignItems: 'center' },
+    modalHeaderInfo: { flex: 1, gap: 2 },
+    modalNameLight: { fontSize: FontSizes.lg, fontWeight: FontWeights.bold, color: '#212529' },
+    modalMetaLight: { fontSize: FontSizes.xs, color: '#59677B' },
+    modalBadge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F0F8FF', paddingHorizontal: 8, paddingVertical: 2, borderRadius: BorderRadius.full, marginTop: 4, borderWidth: 1, borderColor: 'rgba(1,86,167,0.2)' },
+    modalBadgeText: { fontSize: 10, fontWeight: FontWeights.semibold, color: '#0156A7' },
+    modalCloseLight: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F0F0F0', justifyContent: 'center', alignItems: 'center' },
+
+    modalSummaryGrid: { flexDirection: 'row', backgroundColor: '#F9FAFB', borderRadius: BorderRadius.xl, paddingVertical: Spacing.md },
+    modalSummaryItem: { flex: 1, alignItems: 'center' },
+    modalSummaryItemBorder: { borderRightWidth: 1, borderRightColor: '#E5E7EB' },
+    modalSummaryVal: { fontSize: FontSizes.base, fontWeight: FontWeights.extrabold },
+    modalSummaryLbl: { fontSize: 10, color: '#9CA3AF', marginTop: 2 },
+
+    // Logic Section
+    logicSection: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg, paddingBottom: Spacing.sm },
+    logicCard: { flexDirection: 'row', padding: Spacing.md, borderRadius: BorderRadius.lg, gap: Spacing.md, alignItems: 'center' },
+    logicIcon: { width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(1, 86, 167, 0.1)', justifyContent: 'center', alignItems: 'center' },
+    logicContent: { flex: 1 },
+    logicTitle: { fontSize: FontSizes.xs, fontWeight: FontWeights.bold, marginBottom: 4 },
+    formulaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    formulaPart: { alignItems: 'center' },
+    formulaVal: { fontSize: 11, fontWeight: FontWeights.bold },
+    formulaLine: { width: 24, height: 1, backgroundColor: 'rgba(0,0,0,0.1)', marginVertical: 1 },
+    formulaSub: { fontSize: 10, fontWeight: FontWeights.medium, color: 'rgba(0,0,0,0.4)' },
+    formulaEqual: { fontSize: 12, fontWeight: FontWeights.bold },
+    formulaResult: { fontSize: 12, fontWeight: FontWeights.extrabold },
+
     modalList: { paddingHorizontal: Spacing.xl },
     modalEmpty: { alignItems: 'center', paddingVertical: 40 },
     modalEmptyT: { fontSize: FontSizes.sm },
 
     // Day row inside modal
-    dayRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: Spacing.sm },
-    dayDate: { width: 44, alignItems: 'center' },
-    dayNum: { fontSize: FontSizes.xs, fontWeight: FontWeights.bold },
-    dayWd: { fontSize: 10 },
-    dayStatus: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: BorderRadius.full },
-    dayStatusT: { fontSize: 10, fontWeight: FontWeights.semibold },
-    dayHours: { flexDirection: 'row', gap: 4, flex: 1 },
-    hChip: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(0,0,0,0.05)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-    hChipT: { fontSize: 10, fontWeight: FontWeights.medium },
-    dayNote: { fontSize: 10, maxWidth: 80 },
+    dayRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 4, gap: Spacing.sm, borderRadius: BorderRadius.md },
+    dayDate: { width: 42, alignItems: 'flex-start' },
+    dayNum: { fontSize: 13, fontWeight: FontWeights.bold },
+    dayWd: { fontSize: 10, marginTop: 1 },
+    dayStatus: { width: 72, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 4, borderRadius: BorderRadius.full },
+    dayStatusT: { fontSize: 9, fontWeight: FontWeights.bold },
+    dayTimes: { width: 70, gap: 2 },
+    timeItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    timeLbl: { fontSize: 9, fontWeight: FontWeights.medium },
+    timeVal: { fontSize: 10, fontWeight: FontWeights.semibold },
+    dayHours: { flex: 1, alignItems: 'flex-end', gap: 1 },
+    dayCong: { fontSize: 12, fontWeight: FontWeights.bold },
+    dayOT: { fontSize: 9, color: '#F59E0B', fontWeight: FontWeights.medium },
+    dayInfoBtn: { marginLeft: 4 },
 });
 
 

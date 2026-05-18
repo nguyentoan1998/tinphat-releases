@@ -1,14 +1,13 @@
 // Product Outputs Screen — Glassmorphism + Infinite Scroll (Tổng hợp sản phẩm)
-import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, RefreshControl, ActivityIndicator, TextInput, Modal, FlatList, ListRenderItem, Share, Alert } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import { Package, ChevronLeft, RefreshCw, CheckCircle, Clock, Banknote, SquareDashed, User, CalendarDays, FileText, Search, Users, X, Settings2, Eye, EyeOff, Save, Send } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
-import * as Sharing from 'expo-sharing';
+
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
 import { useAuthStore, useThemeStore } from '@/store';
@@ -23,7 +22,7 @@ const toLocalISODate = (date: Date) => {
     return `${y}-${m}-${d}`;
 };
 
-import { Spacing, FontSizes, FontWeights, BorderRadius } from '@/constants/Tokens';
+import { Spacing, FontSizes, FontWeights, BorderRadius, Shadows } from '@/constants/Tokens';
 import { ThemeColors } from '@/constants/ThemeColors';
 import { useDarkDialog } from '@/components/ui/DarkDialog';
 
@@ -310,9 +309,8 @@ export default function ProductOutputsScreen() {
     const ListHeaderComponent = () => (
         <View style={{ gap: Spacing.sm }}>
             <Animated.View entering={FadeInDown.duration(400).delay(80)} style={[s.statsRow, { marginTop: Spacing.sm }]}>
-                <View style={[s.statCard, { borderColor: colors.cardBorder }]}>
-                    <BlurView intensity={20} tint={colors.blurTint} style={StyleSheet.absoluteFill} />
-                    <View style={[s.statInner, { backgroundColor: colors.cardBg }]}>
+                <View style={s.statCard}>
+                    <View style={s.statInner}>
                         <View style={[s.statIconWrap, { backgroundColor: 'rgba(245,158,11,0.15)' }]}>
                             <SquareDashed size={16} color="#F59E0B" />
                         </View>
@@ -320,9 +318,8 @@ export default function ProductOutputsScreen() {
                         <Text style={[s.statL, { color: colors.textMuted }]}>Tổng SP</Text>
                     </View>
                 </View>
-                <View style={[s.statCard, { borderColor: colors.cardBorder }]}>
-                    <BlurView intensity={20} tint={colors.blurTint} style={StyleSheet.absoluteFill} />
-                    <View style={[s.statInner, { backgroundColor: colors.cardBg }]}>
+                <View style={s.statCard}>
+                    <View style={s.statInner}>
                         <View style={[s.statIconWrap, { backgroundColor: 'rgba(16,185,129,0.15)' }]}>
                             <CheckCircle size={16} color="#10B981" />
                         </View>
@@ -330,9 +327,8 @@ export default function ProductOutputsScreen() {
                         <Text style={[s.statL, { color: colors.textMuted }]}>Xác nhận</Text>
                     </View>
                 </View>
-                <View style={[s.statCard, { borderColor: colors.cardBorder }]}>
-                    <BlurView intensity={20} tint={colors.blurTint} style={StyleSheet.absoluteFill} />
-                    <View style={[s.statInner, { backgroundColor: colors.cardBg }]}>
+                <View style={s.statCard}>
+                    <View style={s.statInner}>
                         <View style={[s.statIconWrap, { backgroundColor: 'rgba(129,140,248,0.15)' }]}>
                             <Banknote size={16} color="#818CF8" />
                         </View>
@@ -434,14 +430,14 @@ export default function ProductOutputsScreen() {
             <LinearGradient colors={colors.gradientColors} style={StyleSheet.absoluteFill} />
 
             {/* Decorative orbs */}
-            <View style={[s.orb, { top: -50, right: -30, backgroundColor: 'rgba(20,184,166,0.12)', width: 180, height: 180 }]} />
-            <View style={[s.orb, { top: 180, left: -60, backgroundColor: 'rgba(52,211,153,0.08)', width: 150, height: 150 }]} />
+            <View style={[s.orb, { top: -50, right: -30, backgroundColor: colors.orbColor, width: 180, height: 180 }]} />
+            <View style={[s.orb, { top: 180, left: -60, backgroundColor: colors.orbColor, width: 150, height: 150 }]} />
 
             <SafeAreaView style={s.safe} edges={['top']}>
                 {/* Header */}
                 <Animated.View entering={FadeInDown.duration(400)} style={s.header}>
                     <Pressable style={[s.backBtn, { backgroundColor: colors.inputBg }]} onPress={() => router.back()}>
-                        <ChevronLeft size={22} color={colors.textSecondary} />
+                        <ChevronLeft size={22} color={colors.textPrimary} />
                     </Pressable>
                     <View style={s.headerCenter}>
                         <LinearGradient colors={['#14B8A6', '#34D399']} style={s.headerIcon}>
@@ -449,21 +445,21 @@ export default function ProductOutputsScreen() {
                         </LinearGradient>
                         <View>
                             <Text style={[s.title, { color: colors.textPrimary }]}>Tổng hợp SP</Text>
-                            <Text style={[s.sub, { color: colors.textMuted }]}>
+                            <Text style={[s.sub, { color: colors.textSecondary }]}>
                                 {selectedMonth === 0 ? `Tất cả ${selectedYear}` : fmtMonth(selectedMonth, selectedYear)}
                             </Text>
                         </View>
                     </View>
                     <View style={{ flexDirection: 'row', gap: Spacing.xs }}>
                         <Pressable style={[s.backBtn, { backgroundColor: colors.inputBg }]} onPress={handleSendZalo}>
-                            <Send size={16} color="#0068ff" />
+                            <Send size={16} color={colors.textSecondary} />
                         </Pressable>
                         <Pressable style={[s.backBtn, { backgroundColor: colors.inputBg }]} onPress={onRefresh}>
                             <RefreshCw size={16} color={colors.textSecondary} />
                         </Pressable>
                         {isAdmin && (
-                            <Pressable style={[s.backBtn, { backgroundColor: 'rgba(129,140,248,0.15)', borderWidth: 1, borderColor: 'rgba(129,140,248,0.3)' }]} onPress={() => setShowVisibilityModal(true)}>
-                                <Settings2 size={16} color="#818CF8" />
+                            <Pressable style={[s.backBtn, { backgroundColor: colors.inputBg, borderWidth: 1, borderColor: colors.cardBorder }]} onPress={() => setShowVisibilityModal(true)}>
+                                <Settings2 size={16} color={colors.textSecondary} />
                             </Pressable>
                         )}
                     </View>
@@ -601,9 +597,8 @@ export default function ProductOutputsScreen() {
 function OutputCard({ out, i, colors, showEmployee }: { out: ProductOutput; i: number; colors: any; showEmployee: boolean }) {
     return (
         <Animated.View entering={FadeInUp.duration(350).delay(Math.min(i, 8) * 40).springify().damping(16)}>
-            <View style={[s.card, { borderColor: colors.cardBorder }]}>
-                <BlurView intensity={20} tint={colors.blurTint} style={StyleSheet.absoluteFill} />
-                <View style={[s.cardInner, { backgroundColor: colors.cardBg }]}>
+            <View style={s.card}>
+                <View style={s.cardInner}>
                     {/* Top: icon + title + status */}
                     <View style={s.cardTop}>
                         <LinearGradient
@@ -617,7 +612,7 @@ function OutputCard({ out, i, colors, showEmployee }: { out: ProductOutput; i: n
                                 {out.Product?.name || out.productId}
                             </Text>
                             {out.Product?.name && (
-                                <Text style={[s.cSub, { color: colors.textMuted }]} numberOfLines={1}>
+                                <Text style={[s.cSub, { color: colors.textSecondary }]} numberOfLines={1}>
                                     {out.Product?.code || 'Mã SP'}
                                 </Text>
                             )}
@@ -649,7 +644,7 @@ function OutputCard({ out, i, colors, showEmployee }: { out: ProductOutput; i: n
                         {out.ProductionOrder && (
                             <View style={s.metaItem}>
                                 <FileText size={12} color={colors.textMuted} />
-                                <Text style={[s.metaText, { color: colors.textAccent }]}>
+                                <Text style={[s.metaText, { color: '#38BDF8' }]}>
                                     {out.ProductionOrder.orderNumber}
                                 </Text>
                             </View>
@@ -671,8 +666,8 @@ function OutputCard({ out, i, colors, showEmployee }: { out: ProductOutput; i: n
 
                     {/* Note */}
                     {out.note && (
-                        <View style={[s.noteWrap, { backgroundColor: colors.inputBg, borderColor: colors.cardBorder }]}>
-                            <Text style={[s.note, { color: colors.textMuted }]}>{out.note}</Text>
+                        <View style={[s.noteWrap, { backgroundColor: 'rgba(0,0,0,0.03)', borderColor: colors.cardBorder }]}>
+                            <Text style={[s.note, { color: colors.textSecondary }]}>{out.note}</Text>
                         </View>
                     )}
                 </View>
@@ -692,8 +687,20 @@ const s = StyleSheet.create({
     title: { fontSize: FontSizes.lg, fontWeight: FontWeights.bold },
     sub: { fontSize: FontSizes.xs, marginTop: 1 },
     statsRow: { flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.xl },
-    statCard: { flex: 1, borderRadius: 16, overflow: 'hidden', borderWidth: 1 },
-    statInner: { padding: Spacing.xs, alignItems: 'center', gap: 2 },
+    statCard: {
+        flex: 1,
+        borderRadius: 16,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(1, 86, 167, 0.45)',
+        backgroundColor: '#FFFFFF',
+        ...Shadows.small,
+    },
+    statInner: {
+        padding: Spacing.xs,
+        alignItems: 'center',
+        gap: 2,
+    },
     statIconWrap: { width: 32, height: 32, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginBottom: 2 },
     statV: { fontSize: FontSizes.sm, fontWeight: FontWeights.bold, textAlign: 'center' },
     statL: { fontSize: 10, textAlign: 'center' },
@@ -704,8 +711,19 @@ const s = StyleSheet.create({
     emptyIcon: { width: 72, height: 72, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
     emptyTitle: { fontSize: FontSizes.lg, fontWeight: FontWeights.bold },
     emptyT: { fontSize: FontSizes.sm, textAlign: 'center' },
-    card: { borderRadius: 20, overflow: 'hidden', borderWidth: 1, marginHorizontal: Spacing.xl, marginBottom: Spacing.md },
-    cardInner: { padding: Spacing.md },
+    card: {
+        borderRadius: 20,
+        overflow: 'hidden',
+        borderWidth: 1,
+        marginHorizontal: Spacing.xl,
+        marginBottom: Spacing.md,
+        borderColor: 'rgba(1, 86, 167, 0.45)',
+        backgroundColor: '#FFFFFF',
+        ...Shadows.medium,
+    },
+    cardInner: {
+        padding: Spacing.md,
+    },
     cardTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm },
     cardIconWrap: { width: 38, height: 38, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
     cardTitleWrap: { flex: 1 },

@@ -15,6 +15,7 @@ export interface Salary {
     bonus: number;
     deduction: number;
     totalSalary: number;
+    workHours?: number;
     status: SalaryStatus;
     paidDate?: string;
     note?: string;

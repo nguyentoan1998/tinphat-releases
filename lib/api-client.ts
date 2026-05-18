@@ -1,5 +1,6 @@
 // API Client with JWT authentication
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
+import { Platform } from 'react-native';
 import { secureStorage } from './secure-storage';
 
 // Types
@@ -48,6 +49,36 @@ export interface User {
 // Base API URL
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:3001';
 
+// Extract user-friendly error message
+export function getErrorMessage(error: any, fallback: string): string {
+    if (error?.response?.data?.message) {
+        return error.response.data.message;
+    }
+    if (error?.response?.status === 401) {
+        return 'Phiên đăng nhập hết hạn, vui lòng đăng nhập lại';
+    }
+    if (error?.response?.status === 403) {
+        return 'Bạn không có quyền thực hiện hành động này';
+    }
+    if (error?.response?.status === 404) {
+        return 'Dữ liệu không tồn tại';
+    }
+    if (error?.response?.status === 429) {
+        return 'Quá nhiều yêu cầu, vui lòng thử lại sau';
+    }
+    if (error?.response?.status >= 500) {
+        return 'Lỗi máy chủ, vui lòng thử lại sau';
+    }
+    if (error?.code === 'ECONNABORTED') {
+        return 'Kết nối bị timeout, vui lòng kiểm tra mạng';
+    }
+    if (error?.code === 'ERR_NETWORK' || !error?.response) {
+        const platform = Platform.OS === 'android' ? 'Android' : 'iOS';
+        return `Không thể kết nối đến máy chủ (${platform}). Vui lòng kiểm tra kết nối mạng hoặc liên hệ IT.`;
+    }
+    return fallback;
+}
+
 class ApiClient {
     private client: AxiosInstance;
     private isRefreshing = false;
@@ -59,11 +90,13 @@ class ApiClient {
     constructor() {
         this.client = axios.create({
             baseURL: API_BASE_URL,
-            timeout: 10000,
+            timeout: 15000,
             headers: {
                 'Content-Type': 'application/json',
             },
         });
+
+        console.log(`[API Client] Initialized with base URL: ${API_BASE_URL}`);
 
         this.setupInterceptors();
     }
@@ -105,6 +138,13 @@ class ApiClient {
             (response) => response,
             async (error: AxiosError) => {
                 const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean };
+                const status = error.response?.status;
+                const url = originalRequest?.url;
+
+                // Log all API errors for debugging
+                if (url && !url.includes('/auth/refresh')) {
+                    console.warn(`[API Error] ${status || 'NETWORK'} ${url}: ${error.message}`, error.code);
+                }
 
                 const isAuthEndpoint = originalRequest.url?.includes('/auth/login') ||
                     originalRequest.url?.includes('/auth/register') ||

@@ -72,10 +72,20 @@ export interface Stock {
     quantity: number;
     openingBalance: number;
     images?: any;
+    routingStepId?: string;
     createdAt: string;
     updatedAt: string;
     Product?: Product;
     Warehouse?: Warehouse;
+    RoutingStep?: {
+        id: string;
+        sequenceNo: number;
+        productId: string;
+        Operation?: {
+            id: string;
+            name: string;
+        };
+    };
 }
 
 // Stock Movement

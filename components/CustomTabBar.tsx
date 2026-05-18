@@ -2,8 +2,9 @@
 import React, { useState } from 'react';
 import { View, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { Package, MessageCircle, Factory, CalendarRange, PackageSearch, Users, MessageSquare } from 'lucide-react-native';
+import { Package, MessageCircle, Factory, Bell, CalendarRange, PackageSearch, Users, MessageSquare } from 'lucide-react-native';
 import { usePathname, useRouter } from 'expo-router';
+import NotificationBadge from '@/components/ui/NotificationBadge';
 
 const MENU_ITEMS = [
   { id: 'plan', Icon: CalendarRange, route: '/production/plans', label: 'Kế hoạch' },
@@ -37,13 +38,11 @@ export default function CustomTabBar() {
   };
 
   const renderMenuButtons = () => {
-    const radius = 120; // INCREASED to 120px - MUCH FARTHER from chat button
+    const radius = 120;
     return MENU_ITEMS.map((item, index) => {
-      // 180° arc above: angles 45°, 75°, 105°, 135° (start farther from center)
-      const angleDeg = 45 + (index * 30); // 45, 75, 105, 135
+      const angleDeg = 45 + (index * 30);
       const angleRad = angleDeg * (Math.PI / 180);
       
-      // BOTH start at 1000px (far away) when closed
       const translateX = animation.interpolate({
         inputRange: [0, 1],
         outputRange: [1000, Math.cos(angleRad) * radius],
@@ -51,7 +50,7 @@ export default function CustomTabBar() {
       
       const translateY = animation.interpolate({
         inputRange: [0, 1],
-        outputRange: [1000, -Math.sin(angleRad) * radius], // Negative to go UP
+        outputRange: [1000, -Math.sin(angleRad) * radius],
       });
 
       return (
@@ -70,7 +69,7 @@ export default function CustomTabBar() {
             style={styles.menuBtn} 
             onPress={() => navigateAndClose(item.route)}
           >
-            <item.Icon size={20} color="#0156A7" strokeWidth={2} />
+            <item.Icon size={20} color="#FFFFFF" strokeWidth={2.2} />
           </TouchableOpacity>
         </Animated.View>
       );
@@ -84,6 +83,11 @@ export default function CustomTabBar() {
         <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={toggleMenu} />
       )}
 
+      {/* Menu buttons — OUTSIDE pillOuter để không bị overflow: hidden clip */}
+      <View style={styles.menuLayer} pointerEvents="box-none">
+        {renderMenuButtons()}
+      </View>
+
       {/* Floating Pill Tab Bar */}
       <View style={styles.pillOuter}>
         <BlurView intensity={50} tint="light" style={styles.blur}>
@@ -94,22 +98,36 @@ export default function CustomTabBar() {
               onPress={() => router.push('/inventory' as any)}
             >
               <Package
-                size={22}
+                size={24}
                 color={pathname === '/inventory' ? '#0156A7' : '#59677B'}
-                strokeWidth={pathname === '/inventory' ? 2.2 : 1.8}
+                strokeWidth={2.2}
               />
             </TouchableOpacity>
 
-            {/* Chat button with menu - ONLY toggle menu, NO navigation */}
+            {/* Thông báo */}
+            <TouchableOpacity
+              style={styles.tabItem}
+              onPress={() => router.push('/notifications' as any)}
+            >
+              <View style={styles.bellWrap}>
+                <Bell
+                  size={22}
+                  color={pathname === '/notifications' ? '#0156A7' : '#59677B'}
+                  strokeWidth={2.2}
+                />
+                <NotificationBadge size={16} />
+              </View>
+            </TouchableOpacity>
+
+            {/* Chat button — chỉ toggle menu, không điều hướng */}
             <View style={styles.chatWrapper}>
-              {renderMenuButtons()}
               <TouchableOpacity
                 style={[styles.chatBtn, menuVisible && styles.chatBtnActive]}
                 onPress={() => toggleMenu()}
                 activeOpacity={0.8}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <MessageCircle size={24} color="#FFF" strokeWidth={2} />
+                <MessageCircle size={26} color="#FFF" strokeWidth={2} />
               </TouchableOpacity>
             </View>
 
@@ -119,9 +137,9 @@ export default function CustomTabBar() {
               onPress={() => router.push('/production' as any)}
             >
               <Factory
-                size={22}
+                size={24}
                 color={pathname === '/production' ? '#0156A7' : '#59677B'}
-                strokeWidth={pathname === '/production' ? 2.2 : 1.8}
+                strokeWidth={2.2}
               />
             </TouchableOpacity>
           </View>
@@ -134,37 +152,42 @@ export default function CustomTabBar() {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 20,
-    left: '10%',
-    right: '10%',
+    bottom: 24,
+    left: '12%',
+    right: '12%',
     zIndex: 9999,
     pointerEvents: 'auto',
   },
   pillOuter: {
-    borderRadius: 28,
-    overflow: 'visible',
-    elevation: 6,
-    shadowColor: '#0156A7',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
+    borderRadius: 30,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
   },
   blur: {
-    borderRadius: 28,
-    overflow: 'visible',
-    backgroundColor: 'rgba(255,255,255,0.6)',
-    borderWidth: 1,
-    borderColor: 'rgba(1,86,167,0.1)',
+    borderRadius: 30,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.75)', // Tăng độ đục để icon nổi bật hơn
   },
   pill: {
-    height: 56,
+    height: 60,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
   },
   tabItem: {
     flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bellWrap: {
+    position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -174,24 +197,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
     zIndex: 1001,
-    height: 56,
+    height: 60,
   },
   chatBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#0156A7',
+    width: 52, // Tăng nhẹ kích thước
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#0156A7', 
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#0156A7',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 }, // Đổ bóng sâu hơn tạo hiệu ứng 3D nổi
+    shadowOpacity: 0.4,
     shadowRadius: 8,
-    elevation: 6,
+    elevation: 10,
     zIndex: 1002,
+    borderWidth: 2, // Viền dày hơn
+    borderColor: 'rgba(255,255,255,0.4)',
   },
   chatBtnActive: {
     backgroundColor: '#013B78',
+    borderColor: '#FFFFFF',
+    transform: [{ scale: 0.95 }],
   },
   overlay: {
     position: 'absolute',
@@ -200,6 +227,15 @@ const styles = StyleSheet.create({
     right: -2000,
     bottom: -2000,
     zIndex: 998,
+    backgroundColor: 'rgba(0,0,0,0.1)', // Thêm lớp phủ mờ khi mở menu
+  },
+  menuLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
   },
   menuItem: {
     position: 'absolute',
@@ -210,18 +246,19 @@ const styles = StyleSheet.create({
     zIndex: 999,
   },
   menuBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFFFFF',
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#0284C7',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(1,86,167,0.2)',
-    shadowColor: '#0156A7',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.4)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+    zIndex: 1005,
   },
 });

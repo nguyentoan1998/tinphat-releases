@@ -14,6 +14,7 @@ import GlassButton from '@/components/ui/GlassButton';
 import TinPhatLogo from '@/components/TinPhatLogo';
 import { useDarkDialog } from '@/components/ui/DarkDialog';
 import { Spacing, FontSizes, FontWeights, BorderRadius } from '@/constants/Tokens';
+import { getErrorMessage } from '@/lib/api-client';
 import Constants from 'expo-constants';
 import * as Application from 'expo-application';
 
@@ -38,7 +39,8 @@ export default function LoginScreen() {
             setLocalLoading(true);
             await login({ email, password });
         } catch (err: any) {
-            showDialog('Đăng nhập thất bại', err.response?.data?.message || 'Vui lòng kiểm tra lại thông tin đăng nhập');
+            console.error('[Login] Error:', err.message, err.code, err.response?.status);
+            showDialog('Đăng nhập thất bại', getErrorMessage(err, 'Vui lòng kiểm tra lại email và mật khẩu'));
         } finally {
             setLocalLoading(false);
         }

@@ -9,6 +9,8 @@ export interface AttendanceRecord {
     id: string;
     employeeId: string;
     date: string;
+    checkIn?: string | null;
+    checkOut?: string | null;
     mark: string | null;
     workHours: number;
     overtimeHours: number;

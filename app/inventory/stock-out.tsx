@@ -1,7 +1,6 @@
 // Inventory Stock-Out Screen — Infinite Scroll
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, FlatList, ListRenderItem, RefreshControl, ActivityIndicator } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import { PackageMinus, ChevronLeft, RefreshCw, Calendar, Warehouse, Package, Layers } from 'lucide-react-native';
@@ -10,7 +9,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 
 import { inventoryApi, StockMovement } from '@/lib/inventory-api';
-import { Spacing, FontSizes, FontWeights } from '@/constants/Tokens';
+import { Spacing, FontSizes, FontWeights, Shadows } from '@/constants/Tokens';
 import { useThemeStore } from '@/store';
 import { ThemeColors } from '@/constants/ThemeColors';
 import { useDarkDialog } from '@/components/ui/DarkDialog';
@@ -76,9 +75,8 @@ export default function StockOutScreen() {
 
     const renderItem: ListRenderItem<StockMovement> = useCallback(({ item, index }) => (
         <Animated.View entering={FadeInUp.duration(300).delay(Math.min(index, 8) * 40).springify().damping(18)}>
-            <View style={[s.card, { borderColor: colors.cardBorder }]}>
-                <BlurView intensity={18} tint={colors.blurTint} style={StyleSheet.absoluteFill} />
-                <View style={[s.cardInner, { backgroundColor: colors.cardBg }]}>
+            <View style={s.card}>
+                <View style={s.cardInner}>
                     {/* Top row */}
                     <View style={s.cardTop}>
                         <View style={s.idBadge}>
@@ -91,7 +89,7 @@ export default function StockOutScreen() {
                     {item.Product?.name && (
                         <View style={s.infoRow}>
                             <Package size={13} color="#EF4444" />
-                            <Text style={[s.infoText, { color: colors.textPrimary, fontWeight: FontWeights.semibold }]} numberOfLines={1}>
+                            <Text style={[s.infoText, { color: colors.textPrimary, fontWeight: FontWeights.semibold }]} numberOfLines={2}>
                                 {item.Product.name}
                             </Text>
                         </View>
@@ -111,12 +109,13 @@ export default function StockOutScreen() {
                         <Text style={[s.infoText, { color: colors.textMuted }]}>{item.Warehouse?.name || 'Chưa xác định'}</Text>
                     </View>
                     <View style={s.cardBottom}>
-                        <View style={s.infoRow}>
+                        <View style={s.cardBottomLeft}>
                             <Calendar size={13} color={colors.textMuted} />
-                            <Text style={[s.infoText, { color: colors.textMuted }]}>{fmtDate(item.createdAt)}</Text>
+                            <Text style={[s.dateText, { color: colors.textMuted }]}>{fmtDate(item.createdAt)}</Text>
                         </View>
-                        <View style={[s.qtyChip, { backgroundColor: 'rgba(239,68,68,0.15)' }]}>
-                            <Text style={s.qtyText}>SL: {Number(item.quantity).toLocaleString('vi-VN')}</Text>
+                        <View style={[s.qtyChip, { backgroundColor: 'rgba(239,68,68,0.12)' }]}>
+                            <Text style={s.qtyText}>{Number(item.quantity).toLocaleString('vi-VN')}</Text>
+                            <Text style={s.qtyLabel}>SP</Text>
                         </View>
                     </View>
                     {item.note ? <Text style={[s.note, { color: colors.textMuted }]} numberOfLines={1}>📝 {item.note}</Text> : null}
@@ -247,7 +246,7 @@ const s = StyleSheet.create({
     emptyIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(239,68,68,0.1)', justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
     emptyTitle: { fontSize: FontSizes.base, fontWeight: FontWeights.semibold },
     emptyT: { fontSize: FontSizes.sm, textAlign: 'center' },
-    card: { borderRadius: 16, overflow: 'hidden', borderWidth: 1 },
+    card: { borderRadius: 16, borderWidth: 1, borderColor: 'rgba(1, 86, 167, 0.45)', backgroundColor: '#FFF', ...Shadows.small },
     cardInner: { padding: Spacing.md, gap: 8 },
     cardTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     idBadge: { backgroundColor: 'rgba(239,68,68,0.15)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
@@ -256,8 +255,11 @@ const s = StyleSheet.create({
     statusText: { fontSize: 11, fontWeight: FontWeights.semibold },
     infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     infoText: { fontSize: FontSizes.xs, flex: 1 },
-    cardBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    qtyChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-    qtyText: { fontSize: 12, fontWeight: FontWeights.bold, color: '#EF4444' },
+    cardBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
+    cardBottomLeft: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
+    dateText: { fontSize: FontSizes.xs },
+    qtyChip: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+    qtyText: { fontSize: 14, fontWeight: FontWeights.bold, color: '#EF4444' },
+    qtyLabel: { fontSize: 11, color: '#EF4444', opacity: 0.7 },
     note: { fontSize: 11, fontStyle: 'italic' },
 });

@@ -5,7 +5,6 @@ import {
     RefreshControl, Animated as RNAnimated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import {
     Bell, Settings,
@@ -24,7 +23,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 
-import { Spacing, FontSizes, FontWeights, BorderRadius } from '@/constants/Tokens';
+import { Spacing, FontSizes, FontWeights, BorderRadius, Shadows } from '@/constants/Tokens';
 import { ThemeColors } from '@/constants/ThemeColors';
 import { useAuthStore } from '@/store';
 import { getRoleLabel } from '@/lib/role-permissions';
@@ -268,15 +267,7 @@ function PulseIcon({ Icon, color, size }: { Icon: any; color: string; size: numb
 function HeroCard({ name, role }: { name: string; role: string }) {
     return (
         <Animated.View entering={FadeInDown.duration(500).delay(60).springify().damping(16)} style={s.heroWrap}>
-            <LinearGradient
-                colors={['#0156A7', '#0284C7', '#38BDF8']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={s.heroGradient}
-            >
-                <View style={s.orb1} />
-                <View style={s.orb2} />
-
+            <View style={s.heroGlass}>
                 <View style={s.heroContent}>
                     <View style={s.heroLeft}>
                         <Text style={s.heroGreeting}>{getGreeting()},</Text>
@@ -286,16 +277,13 @@ function HeroCard({ name, role }: { name: string; role: string }) {
                             <Text style={s.roleText}>{role}</Text>
                         </View>
                     </View>
-                    <LinearGradient
-                        colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.1)']}
-                        style={s.heroAvatar}
-                    >
+                    <View style={s.heroAvatar}>
                         <Text style={s.heroAvatarText}>
                             {name.split(' ').map(w => w[0]).slice(-2).join('').toUpperCase()}
                         </Text>
-                    </LinearGradient>
+                    </View>
                 </View>
-            </LinearGradient>
+            </View>
         </Animated.View>
     );
 }
@@ -311,44 +299,48 @@ function ActionGroupCard({ group, delay, onPress }: {
     return (
         <Animated.View
             entering={FadeInUp.duration(450).delay(delay).springify().damping(18)}
-            style={[s.groupCard, { borderColor: colors.cardBorder }]}
+            style={s.groupCard}
         >
-            <BlurView intensity={18} tint="light" style={StyleSheet.absoluteFill} />
-            <View style={[s.groupInner, { backgroundColor: colors.cardBg }]}>
+            <View style={s.groupInner}>
                 {/* Group header — no chevron */}
                 <View style={s.groupHeader}>
                     <LinearGradient colors={group.headerGradient} style={s.groupHeaderIcon}>
                         <HeaderIcon size={14} color="#FFF" strokeWidth={2.5} />
                     </LinearGradient>
-                    <Text style={[s.groupTitle, { color: colors.textPrimary }]}>{group.title}</Text>
+                    <Text style={s.groupTitle}>{group.title}</Text>
                 </View>
 
-                <View style={[s.groupDivider, { backgroundColor: colors.divider }]} />
+                <View style={s.groupDivider} />
 
-                {/* Action items grid — outline style icons */}
+                {/* Action items grid — modern card style */}
                 <View style={s.itemsGrid}>
-                    {group.items.map((item) => {
+                    {group.items.map((item, i) => {
                         const ItemIcon = item.Icon;
                         return (
-                            <Pressable
+                            <Animated.View
                                 key={item.id}
-                                style={({ pressed }) => [
-                                    s.actionItem,
-                                    pressed && s.actionItemPressed,
-                                ]}
-                                onPress={() => onPress(item.route)}
+                                entering={FadeInUp.duration(300).delay(i * 60).springify().damping(20)}
+                                style={s.actionItemWrap}
                             >
-                                <View style={[s.actionIconWrap, { backgroundColor: item.bgColor }]}>
-                                    {item.animated ? (
-                                        <PulseIcon Icon={ItemIcon} color={item.iconColor} size={22} />
-                                    ) : (
-                                        <ItemIcon size={22} color={item.iconColor} strokeWidth={1.6} />
-                                    )}
-                                </View>
-                                <Text style={[s.actionLabel, { color: colors.textSecondary }]} numberOfLines={2}>
-                                    {item.label}
-                                </Text>
-                            </Pressable>
+                                <Pressable
+                                    style={({ pressed }) => [
+                                        s.actionItem,
+                                        pressed && s.actionItemPressed,
+                                    ]}
+                                    onPress={() => onPress(item.route)}
+                                >
+                                    <View style={[s.actionIconWrap, { backgroundColor: item.bgColor, borderColor: item.iconColor + '30' }]}>
+                                        {item.animated ? (
+                                            <PulseIcon Icon={ItemIcon} color={item.iconColor} size={24} />
+                                        ) : (
+                                            <ItemIcon size={24} color={item.iconColor} strokeWidth={1.8} />
+                                        )}
+                                    </View>
+                                    <Text style={s.actionLabel} numberOfLines={2}>
+                                        {item.label}
+                                    </Text>
+                                </Pressable>
+                            </Animated.View>
                         );
                     })}
                 </View>
@@ -409,22 +401,22 @@ export default function HomeScreen() {
     return (
         <View style={s.root}>
             <StatusBar style="dark" />
-            <LinearGradient colors={colors.gradientColors} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={['#F0F8FF', '#F9F9F9', '#FFFFFF']} style={StyleSheet.absoluteFill} />
 
             <SafeAreaView style={s.safe} edges={['top']}>
                 {/* ── Top bar ── */}
                 <Animated.View entering={FadeInDown.duration(350)} style={s.topBar}>
                     <View style={s.topLeft}>
-                        <Text style={[s.appName, { color: colors.textAccent }]}>Tin Phát</Text>
-                        <Text style={[s.appSub, { color: colors.textMuted }]}>Quản lý sản xuất</Text>
+                        <Text style={[s.appName, { color: '#212529' }]}>Tin Phát</Text>
+                        <Text style={[s.appSub, { color: '#59677B' }]}>Quản lý sản xuất</Text>
                     </View>
 
                     <View style={s.topActions}>
                         <Pressable
-                            style={[s.topBtn, { backgroundColor: colors.inputBg }]}
+                            style={s.topBtn}
                             onPress={() => router.push('/notifications')}
                         >
-                            <Bell size={20} color={colors.textSecondary} strokeWidth={1.8} />
+                            <Bell size={20} color="#212529" strokeWidth={1.8} />
                             {unreadCount > 0 && (
                                 <View style={s.badge}>
                                     <Text style={s.badgeText}>
@@ -435,10 +427,10 @@ export default function HomeScreen() {
                         </Pressable>
 
                         <Pressable
-                            style={[s.topBtn, { backgroundColor: colors.inputBg }]}
+                            style={s.topBtn}
                             onPress={() => router.push('/settings')}
                         >
-                            <Settings size={20} color={colors.textSecondary} strokeWidth={1.8} />
+                            <Settings size={20} color="#212529" strokeWidth={1.8} />
                         </Pressable>
                     </View>
                 </Animated.View>
@@ -486,8 +478,10 @@ const s = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: Spacing.xl,
-        paddingTop: Spacing.sm,
+        paddingTop: Spacing.md,
         paddingBottom: Spacing.md,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(0,0,0,0.05)',
     },
     topLeft: { flex: 1 },
     appName: {
@@ -504,17 +498,19 @@ const s = StyleSheet.create({
         gap: Spacing.sm,
     },
     topBtn: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 38,
+        height: 38,
+        borderRadius: 19,
         justifyContent: 'center',
         alignItems: 'center',
         position: 'relative',
+        backgroundColor: '#FFFFFF',
+        ...Shadows.small,
     },
     badge: {
         position: 'absolute',
-        top: 4,
-        right: 4,
+        top: 0,
+        right: 0,
         minWidth: 16,
         height: 16,
         borderRadius: 8,
@@ -524,6 +520,7 @@ const s = StyleSheet.create({
         paddingHorizontal: 3,
         borderWidth: 1.5,
         borderColor: '#FFFFFF',
+        zIndex: 10,
     },
     badgeText: {
         fontSize: 9,
@@ -542,34 +539,15 @@ const s = StyleSheet.create({
     heroWrap: {
         borderRadius: BorderRadius.xxl,
         overflow: 'hidden',
-        shadowColor: '#0156A7',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.25,
-        shadowRadius: 16,
-        elevation: 8,
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        ...Shadows.medium,
     },
-    heroGradient: {
+    heroGlass: {
         padding: Spacing.xl,
-        minHeight: 130,
+        minHeight: 120,
         overflow: 'hidden',
-    },
-    orb1: {
-        position: 'absolute',
-        width: 160,
-        height: 160,
-        borderRadius: 80,
-        backgroundColor: 'rgba(255,255,255,0.08)',
-        top: -40,
-        right: -30,
-    },
-    orb2: {
-        position: 'absolute',
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        backgroundColor: 'rgba(255,255,255,0.06)',
-        bottom: -20,
-        left: 60,
     },
     heroContent: {
         flexDirection: 'row',
@@ -579,25 +557,28 @@ const s = StyleSheet.create({
     heroLeft: { flex: 1, paddingRight: Spacing.md },
     heroGreeting: {
         fontSize: FontSizes.sm,
-        color: 'rgba(255,255,255,0.75)',
+        color: '#59677B',
         fontWeight: FontWeights.medium,
         marginBottom: 4,
     },
     heroName: {
         fontSize: FontSizes.xxl,
         fontWeight: FontWeights.extrabold,
-        color: '#FFFFFF',
+        color: '#212529',
         marginBottom: 10,
     },
     roleBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        backgroundColor: 'rgba(255,255,255,0.18)',
+        backgroundColor: '#F0F8FF',
         alignSelf: 'flex-start',
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: BorderRadius.full,
+        borderWidth: 1,
+        borderColor: 'rgba(1,86,167,0.15)',
+        ...Shadows.small,
     },
     roleDot: {
         width: 6,
@@ -607,7 +588,7 @@ const s = StyleSheet.create({
     },
     roleText: {
         fontSize: FontSizes.xs,
-        color: '#FFFFFF',
+        color: '#0156A7',
         fontWeight: FontWeights.semibold,
     },
     heroAvatar: {
@@ -616,25 +597,31 @@ const s = StyleSheet.create({
         borderRadius: 20,
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 2,
-        borderColor: 'rgba(255,255,255,0.3)',
+        overflow: 'hidden',
+        backgroundColor: '#F0F8FF',
+        borderWidth: 1.5,
+        borderColor: 'rgba(1,86,167,0.2)',
     },
     heroAvatarText: {
         fontSize: FontSizes.xl,
         fontWeight: FontWeights.extrabold,
-        color: '#FFFFFF',
+        color: '#0156A7',
     },
 
     // Group card
     groupCard: {
         borderRadius: BorderRadius.xl,
         overflow: 'hidden',
+        backgroundColor: '#FFFFFF',
         borderWidth: 1,
+        borderColor: '#E5E7EB',
+        ...Shadows.medium,
     },
     groupInner: {
         padding: Spacing.lg,
+        paddingBottom: Spacing.sm,
     },
-    // Header — no chevron, just icon + title
+    // Header — icon + title
     groupHeader: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -642,50 +629,62 @@ const s = StyleSheet.create({
         marginBottom: Spacing.md,
     },
     groupHeaderIcon: {
-        width: 28,
-        height: 28,
-        borderRadius: 8,
+        width: 32,
+        height: 32,
+        borderRadius: 10,
         justifyContent: 'center',
         alignItems: 'center',
     },
     groupTitle: {
         fontSize: FontSizes.base,
         fontWeight: FontWeights.bold,
+        color: '#212529',
     },
     groupDivider: {
         height: 1,
-        marginBottom: Spacing.lg,
+        marginBottom: Spacing.md,
+        backgroundColor: '#E5E7EB',
     },
 
-    // Items grid — 3 columns, outline icon style
+    // Items grid — 3 columns, modern card style
     itemsGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
+        gap: 0,
+    },
+    actionItemWrap: {
+        width: '33.33%',
+        paddingHorizontal: 4,
+        paddingVertical: 4,
     },
     actionItem: {
-        width: '33.33%',
         alignItems: 'center',
         paddingVertical: Spacing.md,
         paddingHorizontal: Spacing.xs,
         gap: Spacing.sm,
-        borderRadius: BorderRadius.md,
+        borderRadius: BorderRadius.lg,
+        backgroundColor: '#FFFFFF',
+        ...Shadows.small,
     },
     actionItemPressed: {
-        opacity: 0.65,
-        transform: [{ scale: 0.96 }],
+        opacity: 0.8,
+        transform: [{ scale: 0.95 }],
     },
-    // Soft tinted background, no gradient — outline icon sits on top
+    // Tinted background with colored border
     actionIconWrap: {
-        width: 54,
-        height: 54,
+        width: 52,
+        height: 50,
         borderRadius: 16,
         justifyContent: 'center',
         alignItems: 'center',
+        overflow: 'hidden',
+        borderWidth: 1,
     },
     actionLabel: {
-        fontSize: FontSizes.xs,
-        fontWeight: FontWeights.medium,
+        fontSize: 11,
+        fontWeight: FontWeights.semibold,
         textAlign: 'center',
-        lineHeight: 16,
+        lineHeight: 15,
+        color: '#374151',
     },
 });

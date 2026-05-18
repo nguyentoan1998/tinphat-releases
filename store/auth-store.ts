@@ -1,7 +1,9 @@
 // Authentication State with Zustand
 import { create } from 'zustand';
-import { apiClient, type User, type LoginRequest } from '@/lib/api-client';
+import { apiClient, getErrorMessage, type User, type LoginRequest } from '@/lib/api-client';
 import { secureStorage } from '@/lib/secure-storage';
+import { useNotificationStore } from './notification-store';
+import { registerForPushNotifications } from '@/lib/notification-setup';
 
 interface AuthState {
     // State
@@ -50,8 +52,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 isLoading: false,
                 error: null,
             });
+
+            useNotificationStore.getState().initSocket(response.access_token);
+            useNotificationStore.getState().fetchUnreadCount();
+            registerForPushNotifications();
         } catch (error: any) {
-            const errorMessage = error.response?.data?.message || 'Đăng nhập thất bại';
+            console.error('[Auth] Login error:', error.message, error.code, error.response?.status);
+            const errorMessage = getErrorMessage(error, 'Đăng nhập thất bại');
             set({
                 user: null,
                 isAuthenticated: false,
@@ -69,7 +76,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const result = await apiClient.register(data);
             return result;
         } catch (error: any) {
-            const errorMessage = error.response?.data?.message || 'Đăng ký thất bại';
+            console.error('[Auth] Register error:', error.message, error.code, error.response?.status);
+            const errorMessage = getErrorMessage(error, 'Đăng ký thất bại');
             set({
                 error: errorMessage,
             });
@@ -80,6 +88,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Logout action
     logout: async () => {
         try {
+            useNotificationStore.getState().destroySocket();
+            useNotificationStore.getState().reset();
+
             // Clear all secure storage
             await secureStorage.clearAll();
 
@@ -115,6 +126,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 isLoading: false,
                 error: null,
             });
+
+            useNotificationStore.getState().initSocket(token);
+            useNotificationStore.getState().fetchUnreadCount();
+            registerForPushNotifications();
         } catch (error) {
             // Token invalid or expired
             await secureStorage.clearAll();

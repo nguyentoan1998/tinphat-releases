@@ -1,16 +1,15 @@
 // Inventory Current Stock Screen — Glassmorphism
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, RefreshControl, TextInput, FlatList, ListRenderItem } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Boxes, ChevronLeft, Search, RefreshCw } from 'lucide-react-native';
+import { Boxes, ChevronLeft, Search, RefreshCw, Layers } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 
 import { inventoryApi, Stock, Warehouse } from '@/lib/inventory-api';
-import { Spacing, FontSizes, FontWeights, BorderRadius } from '@/constants/Tokens';
+import { Spacing, FontSizes, FontWeights, BorderRadius, Shadows } from '@/constants/Tokens';
 import { useThemeStore } from '@/store';
 import { ThemeColors } from '@/constants/ThemeColors';
 import { useDarkDialog } from '@/components/ui/DarkDialog';
@@ -111,31 +110,36 @@ export default function CurrentStockScreen() {
     }, [stockQuery.hasNextPage, stockQuery.isFetchingNextPage, stockQuery.fetchNextPage]);
 
     const renderItem: ListRenderItem<Stock> = useCallback(({ item }) => {
+        const rs = item.RoutingStep;
         return (
-            <View style={[s.card, { borderColor: colors.cardBorder }]}>
-                <BlurView intensity={20} tint={colors.blurTint} style={StyleSheet.absoluteFill} />
-                <View style={[s.cardInner, { backgroundColor: colors.cardBg }]}>
+            <View style={s.card}>
+                <View style={s.cardInner}>
                     <View style={s.row}>
                         <View style={s.nw}>
                             <Text style={[s.cTitle, { color: colors.textPrimary }]}>{item.Product?.name || 'N/A'}</Text>
-                            <Text style={[s.cSub, { color: colors.textMuted }]}>{item.Product?.name || item.productId}</Text>
+                            <Text style={[s.cSub, { color: colors.textMuted }]}>{item.Product?.code || item.productId}</Text>
                         </View>
-                        <View style={[s.qtyBadge, { backgroundColor: 'rgba(56,189,248,0.15)' }]}>
-                            <Text style={s.qtyT}>{item.quantity}</Text>
+                        <View style={[s.qtyBadge, { backgroundColor: 'rgba(56,189,248,0.12)' }]}>
+                            <Text style={s.qtyT}>{Number(item.quantity).toLocaleString('vi-VN')}</Text>
                         </View>
                     </View>
-                    <View style={s.metaRow}>
-                        <View style={{ flex: 1 }}>
-                            {warehouseId === '' ? (
-                                <View style={s.whRow}>
-                                    <View style={[s.whBadge, { backgroundColor: colorForWarehouse(item.warehouseId).bg }]}>
-                                        <Text style={[s.whBadgeText, { color: colorForWarehouse(item.warehouseId).fg }]}>
-                                            {warehouseMap[item.warehouseId]?.name || item.warehouseId}
-                                        </Text>
-                                    </View>
-                                </View>
-                            ) : null}
+                    {rs ? (
+                        <View style={[s.rsRow, { backgroundColor: 'rgba(168,85,247,0.08)', borderColor: 'rgba(168,85,247,0.2)' }]}>
+                            <Layers size={12} color="#A855F7" />
+                            <Text style={[s.rsText, { color: '#A855F7' }]} numberOfLines={1}>
+                                CĐ {rs.sequenceNo}: {rs.Operation?.name || 'N/A'}
+                            </Text>
                         </View>
+                    ) : null}
+                    <View style={s.metaRow}>
+                        {warehouseId === '' ? (
+                            <View style={[s.whBadge, { backgroundColor: colorForWarehouse(item.warehouseId).bg }]}>
+                                <Text style={[s.whBadgeText, { color: colorForWarehouse(item.warehouseId).fg }]}>
+                                    {warehouseMap[item.warehouseId]?.name || item.warehouseId}
+                                </Text>
+                            </View>
+                        ) : null}
+                        <View style={{ flex: 1 }} />
                     </View>
                 </View>
             </View>
@@ -181,9 +185,8 @@ export default function CurrentStockScreen() {
                         { label: 'Mặt hàng', value: filtered.length, color: '#38BDF8' },
                         { label: 'Giá trị tồn', value: (totalValue / 1000000).toFixed(1) + 'M', color: '#34D399' },
                     ].map(st => (
-                        <View key={st.label} style={[s.statCard, { borderColor: colors.cardBorder }]}>
-                            <BlurView intensity={20} tint={colors.blurTint} style={StyleSheet.absoluteFill} />
-                            <View style={[s.statInner, { backgroundColor: colors.cardBg }]}>
+                        <View key={st.label} style={s.statCard}>
+                            <View style={s.statInner}>
                                 <Text style={[s.statV, { color: st.color }]}>{st.value}</Text>
                                 <Text style={[s.statL, { color: colors.textMuted }]}>{st.label}</Text>
                             </View>
@@ -312,7 +315,7 @@ const s = StyleSheet.create({
     title: { fontSize: FontSizes.lg, fontWeight: FontWeights.bold },
     sub: { fontSize: FontSizes.xs, marginTop: 1 },
     statsRow: { flexDirection: 'row', gap: Spacing.md, paddingHorizontal: Spacing.xl, marginBottom: Spacing.sm },
-    statCard: { flex: 1, borderRadius: 14, overflow: 'hidden', borderWidth: 1 },
+    statCard: { flex: 1, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(1, 86, 167, 0.45)', backgroundColor: '#FFF', ...Shadows.small },
     statInner: { paddingVertical: 12, paddingHorizontal: 8, alignItems: 'center' },
     statV: { fontSize: 20, fontWeight: FontWeights.bold },
     statL: { fontSize: 10 },
@@ -351,19 +354,19 @@ const s = StyleSheet.create({
     emptyW: { alignItems: 'center', paddingVertical: 60, gap: Spacing.md },
     emptyT: { fontSize: FontSizes.base, textAlign: 'center' },
     gap: { gap: Spacing.md },
-    card: { borderRadius: 18, overflow: 'hidden', borderWidth: 1 },
-    cardInner: { padding: Spacing.md },
-    row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 },
+    card: { borderRadius: 18, borderWidth: 1, borderColor: 'rgba(1, 86, 167, 0.45)', backgroundColor: '#FFF', ...Shadows.small },
+    cardInner: { padding: Spacing.md, gap: 6 },
+    row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
     nw: { flex: 1, marginRight: Spacing.sm },
     cTitle: { fontSize: FontSizes.sm, fontWeight: FontWeights.semibold },
     cSub: { fontSize: FontSizes.xs, marginTop: 2 },
-    qtyBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+    qtyBadge: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8 },
     qtyT: { fontSize: FontSizes.base, fontWeight: FontWeights.bold, color: '#38BDF8' },
-    metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    metaRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+    rsRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 8, borderWidth: 1, alignSelf: 'flex-start' },
+    rsText: { fontSize: 11, fontWeight: FontWeights.semibold },
     meta: { fontSize: FontSizes.xs },
     totalV: { fontSize: FontSizes.xs, fontWeight: FontWeights.bold },
-
-    whRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
     whBadge: {
         alignSelf: 'flex-start',
         paddingHorizontal: 10,
