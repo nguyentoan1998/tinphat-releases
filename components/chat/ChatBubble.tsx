@@ -1,0 +1,80 @@
+import React from 'react';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Linking } from 'react-native';
+import { FileText } from 'lucide-react-native';
+import { ChatMessage } from '@/store/chat-store';
+import { buildApiUrl } from '@/lib/api-client';
+
+interface Props {
+  message: ChatMessage;
+  isOwn: boolean;
+  onImagePress?: (url: string) => void;
+}
+
+export default function ChatBubble({ message, isOwn, onImagePress }: Props) {
+  const fileUrl = buildApiUrl(message.fileUrl);
+  const time = new Date(message.createdAt).toLocaleTimeString('vi-VN', {
+    hour: '2-digit', minute: '2-digit',
+  });
+  const fileSize = typeof message.fileSize === 'number'
+    ? `${(message.fileSize / 1024 / 1024).toFixed(message.fileSize > 1024 * 1024 ? 1 : 2)} MB`
+    : '';
+
+  return (
+    <View style={[styles.wrapper, isOwn ? styles.own : styles.other]}>
+      <View style={[styles.bubble, isOwn ? styles.bubbleOwn : styles.bubbleOther]}>
+        {message.type === 'TEXT' && (
+          <Text style={[styles.text, { color: isOwn ? '#FFF' : '#1F2937' }]}>
+            {message.content}
+          </Text>
+        )}
+        {message.type === 'IMAGE' && fileUrl && (
+          <TouchableOpacity onPress={() => onImagePress?.(fileUrl)}>
+            <Image
+              source={{ uri: fileUrl }}
+              style={styles.image}
+              resizeMode="cover"
+            />
+          </TouchableOpacity>
+        )}
+        {message.type === 'FILE' && (
+          <TouchableOpacity
+            style={styles.fileRow}
+            disabled={!fileUrl}
+            onPress={() => fileUrl && Linking.openURL(fileUrl)}
+          >
+            <FileText size={20} color={isOwn ? '#FFF' : '#6B7280'} />
+            <View style={styles.fileMeta}>
+              <Text style={[styles.fileName, { color: isOwn ? '#FFF' : '#1F2937' }]} numberOfLines={2}>
+                {message.fileName || 'Tệp đính kèm'}
+              </Text>
+              {!!fileSize && (
+                <Text style={[styles.fileSize, { color: isOwn ? 'rgba(255,255,255,0.7)' : '#9CA3AF' }]}>
+                  {fileSize}
+                </Text>
+              )}
+            </View>
+          </TouchableOpacity>
+        )}
+        <Text style={[styles.time, { color: isOwn ? 'rgba(255,255,255,0.7)' : '#9CA3AF' }]}>
+          {time}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  wrapper: { marginVertical: 3, paddingHorizontal: 12, flexDirection: 'row' },
+  own: { justifyContent: 'flex-end' },
+  other: { justifyContent: 'flex-start' },
+  bubble: { maxWidth: '75%', padding: 10, borderRadius: 16 },
+  bubbleOwn: { backgroundColor: '#0156A7', borderBottomRightRadius: 4 },
+  bubbleOther: { backgroundColor: '#F3F4F6', borderBottomLeftRadius: 4 },
+  text: { fontSize: 15, lineHeight: 20 },
+  image: { width: 200, height: 200, borderRadius: 12 },
+  fileRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  fileMeta: { flexShrink: 1 },
+  fileName: { fontSize: 14, flexShrink: 1 },
+  fileSize: { fontSize: 11, marginTop: 2 },
+  time: { fontSize: 11, marginTop: 4, alignSelf: 'flex-end' },
+});

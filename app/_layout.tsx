@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '@/store';
 import AppUpdateManager from '@/components/ui/AppUpdateManager';
 import NotificationToast from '@/components/ui/NotificationToast';
+import IncomingCallOverlay from '@/components/call/IncomingCallOverlay';
+import ActiveCallScreen from '@/components/call/ActiveCallScreen';
 import { setupNotificationHandler, setupAndroidChannel, addNotificationTapListener, checkInitialNotificationTap } from '@/lib/notification-setup';
 
 // Create QueryClient instance
@@ -62,6 +64,8 @@ function RootLayoutNav() {
                 <AppUpdateManager />
             )}
             <NotificationToast />
+            <IncomingCallOverlay />
+            <ActiveCallScreen />
         </>
     );
 }

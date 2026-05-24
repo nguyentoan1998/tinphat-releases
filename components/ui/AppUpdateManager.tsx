@@ -41,8 +41,10 @@ export default function AppUpdateManager({ config = DEFAULT_UPDATE_CONFIG }: App
 
     // Kiểm tra update khi component mount (Requirement 1.1, 1.3)
     useEffect(() => {
-        startUpdateCheck();
-    }, []);
+        startUpdateCheck().catch(() => {
+            resetToIdle();
+        });
+    }, [resetToIdle, startUpdateCheck]);
 
     // Khi state chuyển sang ready_to_install → tự động trigger install (Requirement 4.1)
     useEffect(() => {
@@ -53,7 +55,9 @@ export default function AppUpdateManager({ config = DEFAULT_UPDATE_CONFIG }: App
         ) {
             installTriggeredRef.current = true;
             pendingInstallPathRef.current = state.filePath;
-            handleInstall(state.filePath);
+            handleInstall(state.filePath).catch(() => {
+                resetToIdle();
+            });
         }
         // Reset trigger flag when state leaves ready_to_install
         if (
@@ -62,7 +66,7 @@ export default function AppUpdateManager({ config = DEFAULT_UPDATE_CONFIG }: App
         ) {
             installTriggeredRef.current = false;
         }
-    }, [state]);
+    }, [resetToIdle, state]);
 
     async function handleInstall(filePath: string) {
         if (Platform.OS !== 'android') return;
@@ -111,7 +115,9 @@ export default function AppUpdateManager({ config = DEFAULT_UPDATE_CONFIG }: App
     function handleUpdate() {
         if (!isUpdateAvailable) return;
         const s = state as { type: 'update_available'; version: string; apkUrl: string; apkSize: number; releaseNotes: string };
-        startDownloadApk(s.apkUrl, s.apkSize);
+        startDownloadApk(s.apkUrl, s.apkSize).catch(() => {
+            resetToIdle();
+        });
     }
 
     function handleDismiss() {

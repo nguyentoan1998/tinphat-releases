@@ -2,6 +2,7 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
 import { Platform } from 'react-native';
 import { secureStorage } from './secure-storage';
+import { isMissingCallLogTableApiError } from './call-error';
 
 // Types
 export interface LoginRequest {
@@ -47,7 +48,14 @@ export interface User {
 }
 
 // Base API URL
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:3001';
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:3001';
+
+export function buildApiUrl(path?: string | null): string | undefined {
+    if (!path) return undefined;
+    if (/^https?:\/\//i.test(path)) return path;
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    return `${API_BASE_URL}${normalizedPath}`;
+}
 
 // Extract user-friendly error message
 export function getErrorMessage(error: any, fallback: string): string {
@@ -142,7 +150,7 @@ class ApiClient {
                 const url = originalRequest?.url;
 
                 // Log all API errors for debugging
-                if (url && !url.includes('/auth/refresh')) {
+                if (url && !url.includes('/auth/refresh') && !isMissingCallLogTableApiError(error)) {
                     console.warn(`[API Error] ${status || 'NETWORK'} ${url}: ${error.message}`, error.code);
                 }
 

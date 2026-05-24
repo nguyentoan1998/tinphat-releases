@@ -36,6 +36,7 @@ module.exports = {
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
         NSCameraUsageDescription: 'Ứng dụng cần quyền camera để chụp ảnh nhân viên và CCCD.',
+        NSMicrophoneUsageDescription: 'Ứng dụng cần quyền micro để gọi thoại và gọi video.',
         NSPhotoLibraryUsageDescription: 'Ứng dụng cần quyền truy cập thư viện ảnh để chọn ảnh nhân viên và CCCD.',
         NSPhotoLibraryAddUsageDescription: 'Ứng dụng cần quyền lưu ảnh vào thư viện.',
       },
@@ -50,6 +51,8 @@ module.exports = {
       predictiveBackGestureEnabled: false,
       permissions: [
         'CAMERA',
+        'RECORD_AUDIO',
+        'MODIFY_AUDIO_SETTINGS',
         'READ_EXTERNAL_STORAGE',
         'WRITE_EXTERNAL_STORAGE',
         'READ_MEDIA_IMAGES',

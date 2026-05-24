@@ -3,6 +3,8 @@ import { create } from 'zustand';
 import { apiClient, getErrorMessage, type User, type LoginRequest } from '@/lib/api-client';
 import { secureStorage } from '@/lib/secure-storage';
 import { useNotificationStore } from './notification-store';
+import { useChatStore } from './chat-store';
+import { useCallStore } from './call-store';
 import { registerForPushNotifications } from '@/lib/notification-setup';
 
 interface AuthState {
@@ -54,8 +56,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             });
 
             useNotificationStore.getState().initSocket(response.access_token);
-            useNotificationStore.getState().fetchUnreadCount();
-            registerForPushNotifications();
+            useNotificationStore.getState().fetchUnreadCount().catch(() => {});
+            registerForPushNotifications().catch(() => {});
+
+            useChatStore.getState().initSocket();
+            useChatStore.getState().loadRooms().catch(() => {});
+            useCallStore.getState().initSocket();
         } catch (error: any) {
             console.error('[Auth] Login error:', error.message, error.code, error.response?.status);
             const errorMessage = getErrorMessage(error, 'Đăng nhập thất bại');
@@ -90,6 +96,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         try {
             useNotificationStore.getState().destroySocket();
             useNotificationStore.getState().reset();
+
+            useChatStore.getState().destroySocket();
+            useChatStore.getState().reset();
+            useCallStore.getState().destroySocket();
+            useCallStore.getState().reset();
 
             // Clear all secure storage
             await secureStorage.clearAll();
@@ -128,8 +139,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             });
 
             useNotificationStore.getState().initSocket(token);
-            useNotificationStore.getState().fetchUnreadCount();
-            registerForPushNotifications();
+            useNotificationStore.getState().fetchUnreadCount().catch(() => {});
+            registerForPushNotifications().catch(() => {});
+
+            useChatStore.getState().initSocket();
+            useChatStore.getState().loadRooms().catch(() => {});
+            useCallStore.getState().initSocket();
         } catch (error) {
             // Token invalid or expired
             await secureStorage.clearAll();

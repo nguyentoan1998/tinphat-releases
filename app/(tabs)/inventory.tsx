@@ -6,7 +6,7 @@ import { BlurView } from 'expo-blur';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import {
     PackagePlus, PackageMinus, ArrowLeftRight, SlidersHorizontal,
-    Boxes, BarChart3, ChevronRight, House,
+    Boxes, BarChart3, ChevronRight,
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -42,12 +42,6 @@ export default function InventoryScreen() {
 
             <SafeAreaView style={s.safe} edges={['top']}>
                 <Animated.View entering={FadeInDown.duration(400)} style={s.header}>
-                    <Pressable
-                        style={[s.homeBtn, { backgroundColor: colors.inputBg }]}
-                        onPress={() => router.replace('/home' as any)}
-                    >
-                        <House size={20} color={colors.textSecondary} />
-                    </Pressable>
                     <View style={s.headerText}>
                         <Text style={[s.title, { color: colors.textPrimary }]}>Kho hàng</Text>
                         <Text style={[s.sub, { color: colors.textMuted }]}>Nhập xuất tồn & Báo cáo</Text>
@@ -88,7 +82,6 @@ export default function InventoryScreen() {
 const s = StyleSheet.create({
     root: { flex: 1 }, safe: { flex: 1 },
     header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg, paddingBottom: Spacing.md },
-    homeBtn: { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center' },
     headerText: { flex: 1 },
     title: { fontSize: FontSizes.xxxl, fontWeight: FontWeights.bold },
     sub: { fontSize: FontSizes.sm, marginTop: 4 },

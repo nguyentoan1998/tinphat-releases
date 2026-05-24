@@ -15,6 +15,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" options={{ href: null }} />
       <Tabs.Screen name="home" options={{ href: '/home' }} />
       <Tabs.Screen name="inventory" options={{ href: '/inventory' }} />
+      <Tabs.Screen name="calls" options={{ href: '/calls' }} />
       <Tabs.Screen name="production" options={{ href: '/production' }} />
     </Tabs>
   );

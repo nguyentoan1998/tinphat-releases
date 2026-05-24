@@ -34,7 +34,7 @@ export default function SplashScreen() {
 
     useEffect(() => {
         // Start auth check immediately (in background)
-        checkAuth();
+        checkAuth().catch(() => {});
 
         // ── Animations ──
         orb1Scale.value = withRepeat(
