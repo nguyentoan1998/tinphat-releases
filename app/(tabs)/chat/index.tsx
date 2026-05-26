@@ -8,6 +8,7 @@ import { useChatStore } from '@/store/chat-store';
 import ChatRoomCard from '@/components/chat/ChatRoomCard';
 import { userApi, AppUser } from '@/lib/user-api';
 import { chatApi } from '@/lib/chat-api';
+import { getErrorMessage } from '@/lib/api-client';
 
 export default function ChatRoomList() {
   const router = useRouter();
@@ -25,7 +26,7 @@ export default function ChatRoomList() {
   }, []);
 
   const handlePress = useCallback((roomId: string) => {
-    router.push(`/chat/${roomId}` as any);
+    router.push(`/(tabs)/chat/${roomId}` as any);
   }, [router]);
 
   const loadUsers = useCallback(async () => {
@@ -60,9 +61,14 @@ export default function ChatRoomList() {
       setPickerVisible(false);
       setQuery('');
       await loadRooms();
-      router.push(`/chat/${room.id}` as any);
-    } catch {
-      Alert.alert('Lỗi', 'Không thể tạo cuộc trò chuyện');
+      router.push(`/(tabs)/chat/${room.id}` as any);
+    } catch (error: any) {
+      console.warn(
+        '[Chat] Failed to create room:',
+        error?.response?.status,
+        error?.response?.data?.message || error?.message,
+      );
+      Alert.alert('Lỗi', getErrorMessage(error, 'Không thể tạo cuộc trò chuyện'));
     }
   }, [loadRooms, router]);
 
@@ -86,10 +92,10 @@ export default function ChatRoomList() {
         )}
         refreshing={loadingRooms}
         onRefresh={loadRooms}
-        contentContainerStyle={rooms.length === 0 ? { flex: 1 } : undefined}
+        contentContainerStyle={rooms.length === 0 ? styles.emptyList : styles.list}
         ListEmptyComponent={
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <Text style={{ color: '#9CA3AF' }}>Chưa có tin nhắn</Text>
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>Chưa có tin nhắn</Text>
           </View>
         }
       />
@@ -153,6 +159,10 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E5E7EB',
   },
   title: { fontSize: 22, fontWeight: '700', color: '#1F2937' },
+  list: { paddingBottom: 100 },
+  emptyList: { flexGrow: 1, paddingBottom: 100 },
+  empty: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyText: { color: '#9CA3AF' },
   newBtn: {
     width: 40,
     height: 40,
@@ -184,7 +194,6 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, marginLeft: 8, fontSize: 15, color: '#1F2937' },
   emptyUsers: { paddingVertical: 40, alignItems: 'center' },
-  emptyText: { color: '#9CA3AF', fontSize: 15 },
   userRow: {
     flexDirection: 'row',
     alignItems: 'center',

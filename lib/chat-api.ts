@@ -1,5 +1,6 @@
 import { apiClient } from './api-client';
 import type { ChatRoom, ChatMessage } from '@/store/chat-store';
+import { isMissingChatTableApiError } from './chat-error';
 
 interface MessagesResponse {
   messages: ChatMessage[];
@@ -7,7 +8,14 @@ interface MessagesResponse {
 }
 
 export const chatApi = {
-  getRooms: (): Promise<ChatRoom[]> => apiClient.get('/chat/rooms'),
+  getRooms: async (): Promise<ChatRoom[]> => {
+    try {
+      return await apiClient.get('/chat/rooms');
+    } catch (error) {
+      if (isMissingChatTableApiError(error)) return [];
+      throw error;
+    }
+  },
   createRoom: (userIds: string[]): Promise<ChatRoom> => apiClient.post('/chat/rooms', { userIds }),
   getMessages: (roomId: string, cursor?: string, limit = 20): Promise<MessagesResponse> =>
     apiClient.get(`/chat/rooms/${roomId}/messages`, { params: { cursor, limit } }),

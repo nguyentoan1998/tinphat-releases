@@ -3,6 +3,7 @@ import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from 'axios';
 import { Platform } from 'react-native';
 import { secureStorage } from './secure-storage';
 import { isMissingCallLogTableApiError } from './call-error';
+import { isMissingChatTableApiError } from './chat-error';
 
 // Types
 export interface LoginRequest {
@@ -150,7 +151,12 @@ class ApiClient {
                 const url = originalRequest?.url;
 
                 // Log all API errors for debugging
-                if (url && !url.includes('/auth/refresh') && !isMissingCallLogTableApiError(error)) {
+                if (
+                    url &&
+                    !url.includes('/auth/refresh') &&
+                    !isMissingCallLogTableApiError(error) &&
+                    !isMissingChatTableApiError(error)
+                ) {
                     console.warn(`[API Error] ${status || 'NETWORK'} ${url}: ${error.message}`, error.code);
                 }
 

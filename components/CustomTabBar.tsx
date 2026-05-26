@@ -8,8 +8,8 @@ const TABS = [
   { id: 'inventory', Icon: Package, route: '/inventory', label: 'Kho hàng' },
   { id: 'calls', Icon: Phone, route: '/(tabs)/calls', label: 'Cuộc gọi' },
   { id: 'home', Icon: House, route: '/home', label: 'Trang chủ' },
-  { id: 'messages', Icon: MessageCircle, route: '/chat', label: 'Tin nhắn' },
-  { id: 'plans', Icon: CalendarRange, route: '/production/plans', label: 'Kế hoạch' },
+  { id: 'messages', Icon: MessageCircle, route: '/(tabs)/chat', label: 'Tin nhắn' },
+  { id: 'plans', Icon: CalendarRange, route: '/(tabs)/production', label: 'Kế hoạch' },
 ];
 
 export default function CustomTabBar() {
@@ -22,7 +22,12 @@ export default function CustomTabBar() {
 
   const isActive = (tab: typeof TABS[number]) => {
     if (!tab.route) return false;
-    return pathname === tab.route || (tab.id === 'calls' && pathname === '/calls');
+    return (
+      pathname === tab.route ||
+      (tab.id === 'calls' && pathname === '/calls') ||
+      (tab.id === 'messages' && pathname.startsWith('/chat')) ||
+      (tab.id === 'plans' && pathname === '/production')
+    );
   };
 
   return (

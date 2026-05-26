@@ -163,9 +163,12 @@ export default function ChatDetail() {
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.1}
           style={styles.list}
+          contentContainerStyle={styles.messages}
           ListFooterComponent={<ChatTypingIndicator userNames={typing} />}
         />
-        <ChatInput onSend={handleSend} onAttachPress={handleAttachPress} onTyping={handleTyping} />
+        <View style={styles.inputWrap}>
+          <ChatInput onSend={handleSend} onAttachPress={handleAttachPress} onTyping={handleTyping} />
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -180,4 +183,6 @@ const styles = StyleSheet.create({
   backBtn: { padding: 8 },
   headerTitle: { fontSize: 18, fontWeight: '600', color: '#1F2937', marginLeft: 8 },
   list: { flex: 1 },
+  messages: { paddingBottom: 12 },
+  inputWrap: { paddingBottom: 92, backgroundColor: '#FFF' },
 });
