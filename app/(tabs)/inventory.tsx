@@ -1,6 +1,6 @@
  // Inventory Tab Screen — Glassmorphism
-import React from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
@@ -34,6 +34,20 @@ export default function InventoryScreen() {
     const colors = ThemeColors.light;
     const role = (user?.role || 'USER') as UserRole;
     const visibleCards = inventoryCards.filter(c => isInventoryCardVisible(c.id, role));
+    const [ready, setReady] = useState(false);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setReady(true), 50);
+        return () => clearTimeout(timer);
+    }, []);
+
+    if (!ready) {
+        return (
+            <View style={{ flex: 1, backgroundColor: '#F0F8FF', justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator size="small" color="#0156A7" />
+            </View>
+        );
+    }
 
     return (
         <View style={s.root}>

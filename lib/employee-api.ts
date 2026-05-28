@@ -90,6 +90,13 @@ export const employeeApi = {
         return [];
     },
 
+    async searchEmployees(query: string): Promise<Employee[]> {
+        const raw = await apiClient.get<any>(`/employees?limit=0&search=${encodeURIComponent(query)}`);
+        if (Array.isArray(raw)) return raw;
+        if (raw && Array.isArray((raw as any).data)) return (raw as any).data;
+        return [];
+    },
+
     async getEmployeeDetail(id: string): Promise<Employee> {
         return apiClient.get<Employee>(`/employees/${id}`);
     },

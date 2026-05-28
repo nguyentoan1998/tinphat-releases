@@ -64,7 +64,7 @@ export default function SalaryScreen() {
     const router = useRouter();
     const { user } = useAuthStore();
     const now = new Date();
-    const [viewMode, setViewMode] = useState<'PERSONAL' | 'TEAM'>(user?.role === 'ADMIN' || user?.role === 'MANAGER' ? 'TEAM' : 'PERSONAL');
+    const [viewMode, setViewMode] = useState<'PERSONAL' | 'TEAM'>(user?.role === 'ADMIN' ? 'TEAM' : 'PERSONAL');
     const [month, setMonth] = useState(now.getMonth() + 1);
     const [year, setYear] = useState(now.getFullYear());
     const [salaries, setSalaries] = useState<Salary[]>([]);
@@ -197,7 +197,7 @@ export default function SalaryScreen() {
                 {/* Mode Toggle & Status Filters */}
                 <Animated.View entering={FadeInDown.duration(350).delay(80).springify().damping(22)} style={s.filterWrap}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: Spacing.sm }}>
-                        {isManager && (
+                        {isAdmin && (
                             <View style={s.viewModeToggle}>
                                 <Pressable 
                                     style={[s.toggleBtn, viewMode === 'PERSONAL' && s.toggleBtnActive]} 

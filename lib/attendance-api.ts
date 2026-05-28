@@ -29,6 +29,7 @@ export interface AttendanceRecord {
 
 export interface AttendanceFilters {
     employeeId?: string;
+    teamId?: string;
     fromDate?: string;
     toDate?: string;
     page?: number;
@@ -51,6 +52,7 @@ export const attendanceApi = {
     async getAttendance(filters?: AttendanceFilters): Promise<AttendancePaginatedResponse> {
         const params = new URLSearchParams();
         if (filters?.employeeId) params.append('employeeId', filters.employeeId);
+        if (filters?.teamId) params.append('teamId', filters.teamId);
         if (filters?.fromDate) params.append('fromDate', filters.fromDate);
         if (filters?.toDate) params.append('toDate', filters.toDate);
         if (filters?.page) params.append('page', String(filters.page));

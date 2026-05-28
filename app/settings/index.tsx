@@ -19,10 +19,11 @@ import { useRouter } from 'expo-router';
 
 import { Spacing, FontSizes, FontWeights, BorderRadius } from '@/constants/Tokens';
 import { ThemeColors } from '@/constants/ThemeColors';
-import { useAuthStore } from '@/store';
-import { getRoleLabel } from '@/lib/role-permissions';
+import { useAuthStore, useNotificationStore } from '@/store';
+import { getRoleLabel, isHomeMenuVisible, type UserRole } from '@/lib/role-permissions';
 import { employeeApi } from '@/lib/employee-api';
 import { useDarkDialog } from '@/components/ui/DarkDialog';
+import { getSocket } from '@/lib/socket';
 import * as SecureStore from 'expo-secure-store';
 
 const NOTIF_PREF_KEY = 'notif_enabled';
@@ -131,12 +132,19 @@ export default function SettingsScreen() {
             .catch(() => { });
     }, []);
 
+    const notifStore = useNotificationStore();
+
     const handleToggleNotif = useCallback(async (val: boolean) => {
         setNotifEnabled(val);
         try {
             await SecureStore.setItemAsync(NOTIF_PREF_KEY, String(val));
+            if (!val) {
+                notifStore.disableNotifications();
+            } else {
+                notifStore.enableNotifications();
+            }
         } catch { }
-    }, []);
+    }, [notifStore]);
 
     const handleLogout = useCallback(() => {
         Alert.alert(

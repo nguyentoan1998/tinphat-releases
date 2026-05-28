@@ -398,10 +398,12 @@ export default function AttendanceScreen() {
     const router = useRouter();
     const { user } = useAuthStore();
     const colors = ThemeColors.light;
-    const isAdmin = user?.role === 'ADMIN' || user?.role === 'MANAGER';
+    const isAdmin = user?.role === 'ADMIN';
+    const isManager = user?.role === 'MANAGER';
+    const canViewTeam = isAdmin || isManager;
 
     const now = new Date();
-    const [viewMode, setViewMode]         = useState<ViewMode>(isAdmin ? 'TEAM' : 'PERSONAL');
+    const [viewMode, setViewMode]         = useState<ViewMode>(canViewTeam ? 'TEAM' : 'PERSONAL');
     const [month, setMonth]               = useState(now.getMonth() + 1);
     const [year, setYear]                 = useState(now.getFullYear());
     const [search, setSearch]             = useState('');
@@ -422,20 +424,22 @@ export default function AttendanceScreen() {
         try {
             const { fromDate, toDate } = getMonthRange(year, month);
             const filters: any = { fromDate, toDate, limit: 0 };
-            
-            // For regular users, always only their own records
-            // For admins/managers, depends on viewMode
-            if (!isAdmin || viewMode === 'PERSONAL') {
-                const empId = (user as any)?.employeeId || user?.id;
-                if (empId) filters.employeeId = empId;
-            }
-            // If isAdmin && viewMode === 'TEAM', we fetch all (no employeeId filter)
+
+            const effectiveEmployeeId = viewMode === 'PERSONAL'
+                ? ((user as any)?.employeeId || '')
+                : '';
+            const effectiveTeamId = (isAdmin && viewMode === 'TEAM')
+                ? selectedTeam
+                : '';
+
+            if (effectiveEmployeeId) filters.employeeId = effectiveEmployeeId;
+            if (effectiveTeamId) filters.teamId = effectiveTeamId;
 
             const res = await attendanceApi.getAttendance(filters);
             setRecords(res.data);
         } catch { setRecords([]); }
         finally { setLoading(false); setRefreshing(false); }
-    }, [year, month, isAdmin, user, viewMode]);
+    }, [year, month, isAdmin, viewMode, selectedTeam, user]);
 
     useEffect(() => { load(); }, [load]);
 
@@ -444,7 +448,6 @@ export default function AttendanceScreen() {
     // Group + filter
     const groups = useMemo(() => {
         let list = records;
-        if (selectedTeam) list = list.filter(r => r.Employee?.Team?.id === selectedTeam || r.Employee?.teamId === selectedTeam);
         if (search.trim()) {
             const q = search.trim().toLowerCase();
             list = list.filter(r =>
@@ -453,7 +456,7 @@ export default function AttendanceScreen() {
             );
         }
         return groupByEmployee(list);
-    }, [records, selectedTeam, search]);
+    }, [records, search]);
 
     return (
         <View style={s.root}>
@@ -475,11 +478,11 @@ export default function AttendanceScreen() {
 
                 {/* Filters */}
                 <Animated.View entering={FadeInDown.duration(350).delay(60)} style={s.filtersWrap}>
-                    {isAdmin && (
+                    {canViewTeam && (
                         <View style={s.viewModeToggle}>
                             <Pressable 
                                 style={[s.toggleBtn, viewMode === 'PERSONAL' && s.toggleBtnActive]} 
-                                onPress={() => setViewMode('PERSONAL')}
+                                onPress={() => { setViewMode('PERSONAL'); setSelectedTeam(''); }}
                             >
                                 <Text style={[s.toggleText, viewMode === 'PERSONAL' && s.toggleTextActive]}>Cá nhân</Text>
                             </Pressable>

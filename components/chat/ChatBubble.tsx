@@ -23,7 +23,7 @@ export default function ChatBubble({ message, isOwn, onImagePress }: Props) {
     <View style={[styles.wrapper, isOwn ? styles.own : styles.other]}>
       <View style={[styles.bubble, isOwn ? styles.bubbleOwn : styles.bubbleOther]}>
         {message.type === 'TEXT' && (
-          <Text style={[styles.text, { color: isOwn ? '#FFF' : '#1F2937' }]}>
+          <Text style={[styles.text, { color: isOwn ? '#FFF' : '#111827' }]}>
             {message.content}
           </Text>
         )}
@@ -42,39 +42,57 @@ export default function ChatBubble({ message, isOwn, onImagePress }: Props) {
             disabled={!fileUrl}
             onPress={() => fileUrl && Linking.openURL(fileUrl)}
           >
-            <FileText size={20} color={isOwn ? '#FFF' : '#6B7280'} />
+            <FileText size={20} color={isOwn ? '#FFF' : '#374151'} />
             <View style={styles.fileMeta}>
-              <Text style={[styles.fileName, { color: isOwn ? '#FFF' : '#1F2937' }]} numberOfLines={2}>
+              <Text style={[styles.fileName, { color: isOwn ? '#FFF' : '#111827' }]} numberOfLines={2}>
                 {message.fileName || 'Tệp đính kèm'}
               </Text>
               {!!fileSize && (
-                <Text style={[styles.fileSize, { color: isOwn ? 'rgba(255,255,255,0.7)' : '#9CA3AF' }]}>
+                <Text style={[styles.fileSize, { color: isOwn ? 'rgba(255,255,255,0.7)' : '#6B7280' }]}>
                   {fileSize}
                 </Text>
               )}
             </View>
           </TouchableOpacity>
         )}
-        <Text style={[styles.time, { color: isOwn ? 'rgba(255,255,255,0.7)' : '#9CA3AF' }]}>
-          {time}
-        </Text>
+        <View style={styles.timeRow}>
+          <Text style={[styles.time, { color: isOwn ? 'rgba(255,255,255,0.8)' : '#6B7280' }]}>
+            {time}
+          </Text>
+          {isOwn && <Text style={styles.seenIcon}>✓✓</Text>}
+        </View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: { marginVertical: 3, paddingHorizontal: 12, flexDirection: 'row' },
+  wrapper: { marginVertical: 3, paddingHorizontal: 12, flexDirection: 'row', alignSelf: 'stretch' },
   own: { justifyContent: 'flex-end' },
   other: { justifyContent: 'flex-start' },
   bubble: { maxWidth: '75%', padding: 10, borderRadius: 16 },
-  bubbleOwn: { backgroundColor: '#0156A7', borderBottomRightRadius: 4 },
-  bubbleOther: { backgroundColor: '#F3F4F6', borderBottomLeftRadius: 4 },
+  bubbleOwn: {
+    backgroundColor: '#0156A7',
+    borderBottomRightRadius: 4,
+    shadowColor: '#0156A7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  bubbleOther: {
+    backgroundColor: '#FFFFFF',
+    borderBottomLeftRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
   text: { fontSize: 15, lineHeight: 20 },
   image: { width: 200, height: 200, borderRadius: 12 },
   fileRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   fileMeta: { flexShrink: 1 },
   fileName: { fontSize: 14, flexShrink: 1 },
   fileSize: { fontSize: 11, marginTop: 2 },
-  time: { fontSize: 11, marginTop: 4, alignSelf: 'flex-end' },
+  timeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', marginTop: 4, gap: 4 },
+  time: { fontSize: 11 },
+  seenIcon: { fontSize: 10, color: 'rgba(255,255,255,0.8)', letterSpacing: -1 },
 });

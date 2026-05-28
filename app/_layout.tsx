@@ -2,7 +2,11 @@
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useAuthStore } from '@/store';
+import { useAuthStore, useNotificationStore } from '@/store';
+import { useChatStore } from '@/store/chat-store';
+import { secureStorage } from '@/lib/secure-storage';
+import * as SecureStore from 'expo-secure-store';
+const NOTIF_PREF_KEY = 'notif_enabled';
 import AppUpdateManager from '@/components/ui/AppUpdateManager';
 import NotificationToast from '@/components/ui/NotificationToast';
 import IncomingCallOverlay from '@/components/call/IncomingCallOverlay';
@@ -48,13 +52,30 @@ function RootLayoutNav() {
         const isPublicRoute = segments[0] === 'login' || segments[0] === 'register' || segments[0] === 'onboarding' || segments[0] === 'splash' || segments[0] === 'verify-email' || segments[0] === 'forgot-password' || segments[0] === 'reset-password';
 
         if (!isAuthenticated && !isPublicRoute) {
-            // Redirect to login if not authenticated and not on public route
             router.replace('/login');
         } else if (isAuthenticated && isPublicRoute) {
-            // Redirect to tabs if authenticated and on public route
             router.replace('/(tabs)');
         }
     }, [isAuthenticated, isLoading, segments]);
+
+    // Initialize notification socket globally
+    useEffect(() => {
+        if (!isAuthenticated || isLoading) return;
+        let cancelled = false;
+        (async () => {
+            const token = await secureStorage.getToken();
+            if (token && !cancelled) {
+                // Load notification preference
+                const notifPref = await SecureStore.getItemAsync(NOTIF_PREF_KEY);
+                if (notifPref === 'false') {
+                    useNotificationStore.getState().disableNotifications();
+                }
+                useNotificationStore.getState().initSocket(token);
+                useChatStore.getState().initSocket();
+            }
+        })();
+        return () => { cancelled = true; };
+    }, [isAuthenticated, isLoading]);
 
     return (
         <>

@@ -9,6 +9,7 @@ interface NotificationState {
     initialized: boolean;
     socketConnected: boolean;
     lastSocketNotification: AppNotification | null;
+    disabled: boolean;
 
     fetchUnreadCount: () => Promise<void>;
     fetchNotifications: (opts?: { skip?: number; take?: number }) => Promise<void>;
@@ -16,6 +17,8 @@ interface NotificationState {
     markAllAsRead: () => Promise<void>;
     initSocket: (token: string) => void;
     destroySocket: () => void;
+    disableNotifications: () => void;
+    enableNotifications: () => void;
     reset: () => void;
 }
 
@@ -26,6 +29,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     initialized: false,
     socketConnected: false,
     lastSocketNotification: null,
+    disabled: false,
 
     fetchUnreadCount: async () => {
         try {
@@ -80,7 +84,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
             set(state => ({
                 unreadCount: state.unreadCount + 1,
                 notifications: [notification, ...state.notifications],
-                lastSocketNotification: notification,
+                lastSocketNotification: state.disabled ? null : notification,
             }));
         });
         s.off('connect');
@@ -98,6 +102,14 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
         set({ socketConnected: false });
     },
 
+    disableNotifications: () => {
+        set({ disabled: true, lastSocketNotification: null });
+    },
+
+    enableNotifications: () => {
+        set({ disabled: false });
+    },
+
     reset: () => {
         set({
             unreadCount: 0,
@@ -106,6 +118,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
             initialized: false,
             socketConnected: false,
             lastSocketNotification: null,
+            disabled: false,
         });
     },
 }));

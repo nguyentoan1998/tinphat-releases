@@ -12,26 +12,28 @@ export default function ChatRoomCard({ room, currentUserId, onPress }: Props) {
   const other = room.participants?.find((p: any) => p.userId !== currentUserId);
   const name = other?.user?.name || 'Unknown';
   const lastMsg = room.lastMessage;
+  const hasUnread = room.unreadCount > 0;
   const time = lastMsg
     ? new Date(lastMsg.createdAt).toLocaleDateString('vi-VN', { hour: '2-digit', minute: '2-digit' })
     : '';
 
   return (
     <TouchableOpacity style={styles.card} onPress={() => onPress(room.id)}>
-      <View style={styles.avatar}>
+      {hasUnread && <View style={styles.unreadDot} />}
+      <View style={[styles.avatar, hasUnread && styles.avatarUnread]}>
         <Text style={styles.avatarText}>{name.charAt(0).toUpperCase()}</Text>
       </View>
       <View style={styles.content}>
-        <Text style={styles.name} numberOfLines={1}>{name}</Text>
+        <Text style={[styles.name, hasUnread && styles.nameUnread]} numberOfLines={1}>{name}</Text>
         {lastMsg && (
-          <Text style={styles.preview} numberOfLines={1}>
+          <Text style={[styles.preview, hasUnread && styles.previewUnread]} numberOfLines={1}>
             {lastMsg.type === 'IMAGE' ? '📷 Hình ảnh' : lastMsg.content}
           </Text>
         )}
       </View>
       <View style={styles.meta}>
-        <Text style={styles.time}>{time}</Text>
-        {room.unreadCount > 0 && (
+        <Text style={[styles.time, hasUnread && styles.timeUnread]}>{time}</Text>
+        {hasUnread && (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{room.unreadCount > 99 ? '99+' : room.unreadCount}</Text>
           </View>
@@ -42,14 +44,19 @@ export default function ChatRoomCard({ room, currentUserId, onPress }: Props) {
 }
 
 const styles = StyleSheet.create({
-  card: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 0.5, borderBottomColor: '#E5E7EB' },
+  card: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 0.5, borderBottomColor: '#E5E7EB', position: 'relative' },
+  unreadDot: { position: 'absolute', left: 8, top: '50%', marginTop: -4, width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' },
   avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#0156A7', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  avatarUnread: { borderWidth: 2, borderColor: '#EF4444' },
   avatarText: { color: '#FFF', fontSize: 18, fontWeight: 'bold' },
   content: { flex: 1 },
   name: { fontSize: 16, fontWeight: '600', color: '#1F2937' },
+  nameUnread: { fontWeight: '700', color: '#111827' },
   preview: { fontSize: 14, color: '#6B7280', marginTop: 2 },
+  previewUnread: { fontWeight: '600', color: '#111827' },
   meta: { alignItems: 'flex-end', marginLeft: 8 },
-  time: { fontSize: 12, color: '#9CA3AF' },
+  time: { fontSize: 12, color: '#6B7280' },
+  timeUnread: { fontWeight: '600', color: '#EF4444' },
   badge: { backgroundColor: '#EF4444', borderRadius: 10, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 6, marginTop: 4 },
   badgeText: { color: '#FFF', fontSize: 11, fontWeight: 'bold' },
 });

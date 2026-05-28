@@ -1,5 +1,5 @@
 // Home Screen — Default screen after login
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     View, Text, StyleSheet, Pressable, ScrollView,
     RefreshControl, Animated as RNAnimated,
@@ -25,9 +25,8 @@ import { useRouter } from 'expo-router';
 
 import { Spacing, FontSizes, FontWeights, BorderRadius, Shadows } from '@/constants/Tokens';
 import { ThemeColors } from '@/constants/ThemeColors';
-import { useAuthStore } from '@/store';
-import { getRoleLabel } from '@/lib/role-permissions';
-import { notificationApi } from '@/lib/notification-api';
+import { useAuthStore, useNotificationStore } from '@/store';
+import { getRoleLabel, isHomeMenuVisible, type UserRole } from '@/lib/role-permissions';
 import { employeeApi } from '@/lib/employee-api';
 
 // ─── Types ────────────────────────────────────────────────────
@@ -355,11 +354,22 @@ export default function HomeScreen() {
     const router = useRouter();
     const { user } = useAuthStore();
     const colors = ThemeColors.light;
-    const [unreadCount, setUnreadCount] = useState(0);
+    const unreadCount = useNotificationStore((s) => s.unreadCount);
     const [refreshing, setRefreshing] = useState(false);
     const [fullName, setFullName] = useState<string>('');
 
+    const role = user?.role as UserRole | undefined;
     const roleLabel = getRoleLabel(user?.role);
+
+    const visibleGroups = useMemo(() =>
+        ACTION_GROUPS
+            .map((group) => ({
+                ...group,
+                items: group.items.filter((item) => isHomeMenuVisible(item.id, role)),
+            }))
+            .filter((group) => group.items.length > 0),
+        [role],
+    );
 
     // Fetch employee fullName — user.name từ User table thường là email prefix
     // fullName thực sự nằm ở Employee.fullName
@@ -381,22 +391,11 @@ export default function HomeScreen() {
     // Tên hiển thị: ưu tiên fullName từ employee, sau đó user.name, cuối cùng email prefix
     const displayName = fullName || user?.name || user?.email?.split('@')[0] || 'Bạn';
 
-    const loadUnread = useCallback(async () => {
-        try {
-            const res = await notificationApi.getNotifications({ take: 1 });
-            setUnreadCount(res.unreadCount ?? 0);
-        } catch { }
-    }, []);
-
-    useEffect(() => {
-        loadUnread();
-    }, [loadUnread]);
-
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
-        await loadUnread();
+        useNotificationStore.getState().fetchUnreadCount();
         setRefreshing(false);
-    }, [loadUnread]);
+    }, []);
 
     return (
         <View style={s.root}>
@@ -450,7 +449,7 @@ export default function HomeScreen() {
                 >
                     <HeroCard name={displayName} role={roleLabel} />
 
-                    {ACTION_GROUPS.map((group, i) => (
+                    {visibleGroups.map((group, i) => (
                         <ActionGroupCard
                             key={group.id}
                             group={group}

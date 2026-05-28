@@ -177,7 +177,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           messages: { ...s.messages, [message.roomId]: [...filtered, message] },
           rooms: s.rooms.map((r) =>
             r.id === message.roomId
-              ? { ...r, lastMessage: message, updatedAt: message.createdAt }
+              ? { ...r, lastMessage: message, updatedAt: message.createdAt, unreadCount: (r.unreadCount || 0) + 1 }
               : r
           ),
         };

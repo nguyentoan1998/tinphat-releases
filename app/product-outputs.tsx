@@ -35,6 +35,7 @@ const fmtMonth = (m: number, y: number) => `T${m}/${y}`;
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 type StatusFilter = 'all' | 'verified' | 'pending';
 const PAGE_SIZE = 50;
+type ViewMode = 'PERSONAL' | 'TEAM';
 
 export default function ProductOutputsScreen() {
     const router = useRouter();
@@ -45,6 +46,10 @@ export default function ProductOutputsScreen() {
 
     const isAdmin = user?.role === 'ADMIN';
     const isManager = user?.role === 'MANAGER';
+    const canViewTeam = isAdmin || isManager;
+
+    // ADMIN & MANAGER default TEAM (auto-scoped), USER defaults PERSONAL
+    const [viewMode, setViewMode] = useState<ViewMode>(canViewTeam ? 'TEAM' : 'PERSONAL');
 
     // Filters
     const now = new Date();
@@ -75,15 +80,27 @@ export default function ProductOutputsScreen() {
         return () => clearTimeout(t);
     }, [searchText]);
 
+    // Filters based on viewMode:
+    // - PERSONAL: always filter by current user's employeeId
+    // - TEAM + ADMIN: send teamId if selected, or none for all
+    // - TEAM + MANAGER: send nothing — backend auto-scopes by their team
+    const effectiveEmployeeId = viewMode === 'PERSONAL'
+        ? ((user as any)?.employeeId || '')
+        : '';
+    const effectiveTeamId = (isAdmin && viewMode === 'TEAM')
+        ? selectedTeamId
+        : '';
+
     const outputsQuery = useInfiniteQuery({
         queryKey: [
             'product-outputs',
             selectedMonth,
             selectedYear,
-            selectedTeamId,
+            effectiveTeamId,
             statusFilter,
             debouncedSearch,
-            selectedEmployeeId,
+            effectiveEmployeeId,
+            viewMode,
         ],
         queryFn: ({ pageParam }) => {
             const month = selectedMonth === 0 ? undefined : selectedMonth;
@@ -94,8 +111,8 @@ export default function ProductOutputsScreen() {
                 year,
                 verified: statusFilter === 'all' ? undefined : statusFilter === 'verified',
                 search: debouncedSearch.trim() || undefined,
-                teamId: selectedTeamId || undefined,
-                employeeId: selectedEmployeeId || undefined,
+                teamId: effectiveTeamId || undefined,
+                employeeId: effectiveEmployeeId || undefined,
                 page: Number(pageParam ?? 1),
                 limit: PAGE_SIZE,
             });
@@ -123,10 +140,11 @@ export default function ProductOutputsScreen() {
             'product-outputs-stats',
             selectedMonth,
             selectedYear,
-            selectedTeamId,
+            effectiveTeamId,
             statusFilter,
             debouncedSearch,
-            selectedEmployeeId,
+            effectiveEmployeeId,
+            viewMode,
         ],
         queryFn: () => {
             const month = selectedMonth === 0 ? undefined : selectedMonth;
@@ -136,8 +154,8 @@ export default function ProductOutputsScreen() {
                 year,
                 verified: statusFilter === 'all' ? undefined : statusFilter === 'verified',
                 search: debouncedSearch.trim() || undefined,
-                teamId: selectedTeamId || undefined,
-                employeeId: selectedEmployeeId || undefined,
+                teamId: effectiveTeamId || undefined,
+                employeeId: effectiveEmployeeId || undefined,
                 limit: 0,
             });
         },
@@ -255,8 +273,8 @@ export default function ProductOutputsScreen() {
     };
 
     const renderItem: ListRenderItem<ProductOutput> = useCallback(({ item, index }) => (
-        <OutputCard out={item} i={index} colors={colors} showEmployee={isAdmin || isManager} />
-    ), [colors, isAdmin, isManager]);
+        <OutputCard out={item} i={index} colors={colors} showEmployee={viewMode === 'TEAM'} />
+    ), [colors, viewMode]);
 
     const keyExtractor = useCallback((item: ProductOutput, index: number) => `${item.id}_${index}`, []);
 
@@ -338,6 +356,29 @@ export default function ProductOutputsScreen() {
                 </View>
             </Animated.View>
 
+            {/* ViewMode toggle: Personal / Team */}
+            {canViewTeam && (
+            <Animated.View entering={FadeInDown.duration(400).delay(100)} style={{ paddingHorizontal: Spacing.xl }}>
+                <View style={s.viewModeToggle}>
+                    <Pressable
+                        style={[s.toggleBtn, viewMode === 'PERSONAL' && s.toggleBtnActive]}
+                        onPress={() => setViewMode('PERSONAL')}
+                    >
+                        <Text style={[s.toggleText, viewMode === 'PERSONAL' && s.toggleTextActive]}>Cá nhân</Text>
+                    </Pressable>
+                    <Pressable
+                        style={[s.toggleBtn, viewMode === 'TEAM' && s.toggleBtnActive]}
+                        onPress={() => {
+                            setViewMode('TEAM');
+                            setSelectedEmployeeId('');
+                        }}
+                    >
+                        <Text style={[s.toggleText, viewMode === 'TEAM' && s.toggleTextActive]}>Đội nhóm</Text>
+                    </Pressable>
+                </View>
+            </Animated.View>
+            )}
+
             {/* Month Picker */}
             <Animated.View entering={FadeInDown.duration(400).delay(120)}>
                 <FlatList
@@ -379,14 +420,16 @@ export default function ProductOutputsScreen() {
                 </Animated.View>
             )}
 
-            {/* Search + Filter bar */}
+            {/* Search + Filter bar — employee filter only for ADMIN */}
             <Animated.View entering={FadeInDown.duration(400).delay(200)} style={s.searchRow}>
-                <Pressable
-                    onPress={() => setShowEmployeeModal(true)}
-                    style={{ width: 42, height: 42, borderRadius: 14, borderWidth: 1, borderColor: selectedEmployeeId ? '#F59E0B' : colors.cardBorder, backgroundColor: selectedEmployeeId ? 'rgba(245,158,11,0.1)' : colors.inputBg, justifyContent: 'center', alignItems: 'center' }}
-                >
-                    <User size={18} color={selectedEmployeeId ? '#F59E0B' : colors.textSecondary} />
-                </Pressable>
+                {isAdmin && (
+                    <Pressable
+                        onPress={() => setShowEmployeeModal(true)}
+                        style={{ width: 42, height: 42, borderRadius: 14, borderWidth: 1, borderColor: selectedEmployeeId ? '#F59E0B' : colors.cardBorder, backgroundColor: selectedEmployeeId ? 'rgba(245,158,11,0.1)' : colors.inputBg, justifyContent: 'center', alignItems: 'center' }}
+                    >
+                        <User size={18} color={selectedEmployeeId ? '#F59E0B' : colors.textSecondary} />
+                    </Pressable>
+                )}
                 <View style={[s.searchBox, { backgroundColor: colors.inputBg, borderColor: colors.cardBorder }]}>
                     <Search size={15} color={colors.textMuted} />
                     <TextInput
@@ -457,7 +500,7 @@ export default function ProductOutputsScreen() {
                         <Pressable style={[s.backBtn, { backgroundColor: colors.inputBg }]} onPress={onRefresh}>
                             <RefreshCw size={16} color={colors.textSecondary} />
                         </Pressable>
-                        {isAdmin && (
+                    {isAdmin && (
                             <Pressable style={[s.backBtn, { backgroundColor: colors.inputBg, borderWidth: 1, borderColor: colors.cardBorder }]} onPress={() => setShowVisibilityModal(true)}>
                                 <Settings2 size={16} color={colors.textSecondary} />
                             </Pressable>
@@ -769,4 +812,11 @@ const s = StyleSheet.create({
     visToggle: { width: 36, height: 22, borderRadius: 11, borderWidth: 1.5, justifyContent: 'center', paddingHorizontal: 2 },
     visToggleDot: { width: 16, height: 16, borderRadius: 8 },
     modalFooter: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.xl, paddingTop: Spacing.md, marginTop: Spacing.md, borderTopWidth: 1 },
+
+    // ViewMode toggle
+    viewModeToggle: { flexDirection: 'row', padding: 3, borderRadius: 20, marginBottom: 4, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB', ...Shadows.small },
+    toggleBtn: { flex: 1, paddingVertical: 6, alignItems: 'center', borderRadius: 18 },
+    toggleBtnActive: { backgroundColor: '#0156A7' },
+    toggleText: { fontSize: FontSizes.sm, fontWeight: FontWeights.semibold, color: '#6B7280' },
+    toggleTextActive: { color: '#FFFFFF' },
 });
