@@ -8,7 +8,7 @@
  */
 import React, { useEffect, useRef } from 'react';
 import { Linking, Platform } from 'react-native';
-import { useUpdate, DEFAULT_UPDATE_CONFIG } from '@/lib/update';
+import { useUpdate, DEFAULT_UPDATE_CONFIG, clearCache } from '@/lib/update';
 import type { UpdateConfig } from '@/lib/update';
 import UpdateDialog from './UpdateDialog';
 import DownloadProgressModal from './DownloadProgressModal';
@@ -70,6 +70,9 @@ export default function AppUpdateManager({ config = DEFAULT_UPDATE_CONFIG }: App
 
     async function handleInstall(filePath: string) {
         if (Platform.OS !== 'android') return;
+        // Clear release cache sau khi install để lần mở app sau fetch lại từ GitHub,
+        // tránh cache cũ làm sai lệch kết quả so sánh version.
+        await clearCache();
         await triggerInstall(filePath);
     }
 

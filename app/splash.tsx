@@ -16,7 +16,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useAuthStore } from '@/store';
 import { notificationApi } from '@/lib/notification-api';
-import StockFlowLogo from '@/components/TinPhatLogo';
+import TinPhatLogo from '@/components/TinPhatLogo';
 
 const SPLASH_DURATION = 2000; // Giảm xuống 2 giây hoặc chờ Auth check
 
@@ -119,7 +119,7 @@ export default function SplashScreen() {
 
             {/* Logo */}
             <Animated.View style={[styles.center, logoAnimStyle]}>
-                <StockFlowLogo size={130} showText={true} />
+                <TinPhatLogo size={130} showText={true} />
             </Animated.View>
 
             {/* Spinner */}

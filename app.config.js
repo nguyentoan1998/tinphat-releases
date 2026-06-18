@@ -18,12 +18,12 @@ const version = pkg.version;
 module.exports = {
   expo: {
     name: 'Tín Phát Metech',
-    slug: 'stockflow',
+    slug: 'tinphat',
     version,                    // ← tự động từ package.json
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
-    scheme: 'stockflow',
+    scheme: 'tinphat',
     newArchEnabled: true,
     splash: {
       image: './assets/splash-icon.png',

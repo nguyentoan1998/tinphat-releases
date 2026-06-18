@@ -13,11 +13,14 @@
  * Requirements: 1.3, 2.1, 3.2, 3.6, 4.1, 7.1, 7.2
  */
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { UpdateUiState, UpdateConfig } from './types';
 import { checkForUpdate } from './update-checker';
 import { startDownload } from './downloader';
 import { installApk } from './installer';
+
+// Auto-retry interval for transient network errors (30 seconds)
+const RETRY_INTERVAL_MS = 30_000;
 
 interface LastDownloadParams {
   apkUrl: string;
@@ -48,13 +51,28 @@ export function useUpdate(config: UpdateConfig): UseUpdateReturn {
   // Last download params stored for retry support
   const lastDownloadParamsRef = useRef<LastDownloadParams | null>(null);
 
+  // Retry timer ref for auto-retry on transient errors
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup retry timer on unmount
+  useEffect(() => {
+    return () => {
+      if (retryTimerRef.current !== null) {
+        clearTimeout(retryTimerRef.current);
+      }
+    };
+  }, []);
+
   /**
    * Check for available updates.
    * Transitions: idle → checking → (no_update | update_available | error)
    * Requirement 1.3, 2.1, 7.1, 7.2
+   * On transient errors (no_network, rate_limited), auto-retries after a delay.
    */
-  const startUpdateCheck = useCallback(async (): Promise<void> => {
+  const startUpdateCheck = useCallback(async (retryOnFailure: boolean = true): Promise<void> => {
     setState('checking');
+
+    console.log('[AppUpdate] Starting update check...');
 
     const result = await checkForUpdate(config);
 
@@ -63,10 +81,12 @@ export function useUpdate(config: UpdateConfig): UseUpdateReturn {
 
       // Requirement 7.2: skip update_available if version was dismissed this session
       if (dismissedVersionRef.current === remoteVersion) {
+        console.log(`[AppUpdate] Version ${remoteVersion} was dismissed this session — skipping`);
         setState('no_update');
         return;
       }
 
+      console.log(`[AppUpdate] Update available: v${remoteVersion}`);
       setState({
         type: 'update_available',
         version: remoteVersion,
@@ -75,12 +95,22 @@ export function useUpdate(config: UpdateConfig): UseUpdateReturn {
         apkSize,
       });
     } else if (result.type === 'no_update') {
+      console.log('[AppUpdate] No update available');
       setState('no_update');
     } else {
       // result.type === 'error'
-      // Lỗi check update (no_network, fetch_failed, url_not_configured, malformed_version)
-      // → SILENT: không hiện modal, chỉ set về idle để không block UI
-      // User không cần biết về lỗi check update — app vẫn dùng bình thường
+      console.error(`[AppUpdate] Update check failed: ${result.reason}`);
+
+      // Transient errors: auto-retry after delay
+      if (retryOnFailure && (result.reason === 'no_network' || result.reason === 'rate_limited' || result.reason === 'fetch_failed')) {
+        console.log(`[AppUpdate] Will retry in ${RETRY_INTERVAL_MS / 1000}s...`);
+        retryTimerRef.current = setTimeout(() => {
+          console.log('[AppUpdate] Retrying update check...');
+          startUpdateCheck(false).catch(() => {});
+        }, RETRY_INTERVAL_MS);
+      }
+
+      // Silent: không hiện modal lỗi cho user
       setState('idle');
     }
   }, [config]);
