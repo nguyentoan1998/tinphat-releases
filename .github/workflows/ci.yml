@@ -33,10 +33,20 @@ jobs:
 
   eas-preview:
     name: EAS Preview (Android)
-    # Chạy trên pull request khi có EXPO_TOKEN (lấy tại https://expo.dev/settings/access-tokens).
-    if: ${{ github.event_name == 'pull_request' && secrets.EXPO_TOKEN != '' }}
+    # Chỉ chạy trên PR khi EXPO_TOKEN được đặt.
+    # Bỏ qua step nếu thiếu token thay vì dùng if ở job level (hạn chế của expression context).
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
+      - name: Check EXPO_TOKEN
+        id: check_token
+        run: |
+          if [ -n "${{ secrets.EXPO_TOKEN }}" ]; then
+            echo "has_token=yes" >> $GITHUB_OUTPUT
+          else
+            echo "has_token=no" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -46,13 +56,16 @@ jobs:
           node-version: 22
 
       - name: Setup Expo
+        if: steps.check_token.outputs.has_token == 'yes'
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Install dependencies
+        if: steps.check_token.outputs.has_token == 'yes'
         run: npm install
 
       - name: EAS Preview build
+        if: steps.check_token.outputs.has_token == 'yes'
         run: eas build --profile preview --platform android --non-interactive --no-wait
