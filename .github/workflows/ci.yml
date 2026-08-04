@@ -1,0 +1,58 @@
+name: Mobile CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: mobile-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        # Repo chưa có lockfile → dùng npm install. Nên tạo và commit package-lock.json
+        # để build tái lập được (npm ci).
+        run: npm install
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+  eas-preview:
+    name: EAS Preview (Android)
+    # Chạy trên pull request khi có EXPO_TOKEN (lấy tại https://expo.dev/settings/access-tokens).
+    if: ${{ github.event_name == 'pull_request' && secrets.EXPO_TOKEN != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: EAS Preview build
+        run: eas build --profile preview --platform android --non-interactive --no-wait
