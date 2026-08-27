@@ -49,7 +49,7 @@ export interface User {
 }
 
 // Base API URL
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:3001';
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.tinphatmetech.online';
 
 export function buildApiUrl(path?: string | null): string | undefined {
     if (!path) return undefined;
