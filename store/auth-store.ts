@@ -102,8 +102,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             useCallStore.getState().destroySocket();
             useCallStore.getState().reset();
 
-            // Clear all secure storage
+            // Get refresh token before clearing (for API logout call)
+            const refreshToken = await secureStorage.getRefreshToken();
+
+            // Call backend logout if we have a refresh token
+            if (refreshToken) {
+                try {
+                    await apiClient.logout(refreshToken);
+                } catch (apiError) {
+                    console.warn('Backend logout failed:', apiError);
+                    // Continue with local logout even if API fails
+                }
+            }
+
+            // Clear all secure storage (both native and web localStorage)
             await secureStorage.clearAll();
+
+            // Force clear web localStorage as backup
+            if (typeof window !== 'undefined' && window.localStorage) {
+                window.localStorage.clear();
+            }
 
             set({
                 user: null,
@@ -113,6 +131,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             });
         } catch (error) {
             console.error('Logout error:', error);
+            // Force reset state even on error
+            set({
+                user: null,
+                isAuthenticated: false,
+                isLoading: false,
+                error: null,
+            });
         }
     },
 
@@ -124,7 +149,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const token = await secureStorage.getToken();
 
             if (!token) {
-                set({ isLoading: false, isAuthenticated: false });
+                set({ isLoading: false, isAuthenticated: false, user: null });
                 return;
             }
 
@@ -146,8 +171,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             useChatStore.getState().loadRooms().catch(() => {});
             useCallStore.getState().initSocket();
         } catch (error) {
-            // Token invalid or expired
+            // Token invalid or expired - clear everything
+            console.log('[Auth] checkAuth failed, clearing storage:', error);
             await secureStorage.clearAll();
+            
+            // Force clear web localStorage as backup
+            if (typeof window !== 'undefined' && window.localStorage) {
+                window.localStorage.clear();
+            }
+            
             set({
                 user: null,
                 isAuthenticated: false,
