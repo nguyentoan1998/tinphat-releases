@@ -64,18 +64,35 @@ export function resolveResponsiveValue<T>(value: ResponsiveValue<T>, breakpoint:
  * Hook to get responsive values based on screen dimensions
  */
 export function useResponsive() {
-  const [dimensions, setDimensions] = useState<ScaledSize>(() => Dimensions.get('window'));
+  const [dimensions, setDimensions] = useState<ScaledSize>(() => {
+    // On web, use window.innerWidth/Height for actual viewport size
+    // On native, use Dimensions API
+    if (typeof window !== 'undefined') {
+      return { width: window.innerWidth, height: window.innerHeight, scale: 1, fontScale: 1 };
+    }
+    return Dimensions.get('window');
+  });
   const [isWeb, setIsWeb] = useState(false);
 
   useEffect(() => {
     // Check if running on web
-    setIsWeb(typeof window !== 'undefined');
+    const isWebEnv = typeof window !== 'undefined';
+    setIsWeb(isWebEnv);
     
-    const subscription = Dimensions.addEventListener('change', ({ window }) => {
-      setDimensions(window);
-    });
-    
-    return () => subscription?.remove();
+    if (isWebEnv) {
+      // On web, listen to window resize for actual viewport changes
+      const handleResize = () => {
+        setDimensions({ width: window.innerWidth, height: window.innerHeight, scale: 1, fontScale: 1 });
+      };
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    } else {
+      // On native, use Dimensions API
+      const subscription = Dimensions.addEventListener('change', ({ window }) => {
+        setDimensions(window);
+      });
+      return () => subscription?.remove();
+    }
   }, []);
 
   const breakpoint = getCurrentBreakpoint(dimensions.width);

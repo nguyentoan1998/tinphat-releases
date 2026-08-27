@@ -103,6 +103,8 @@ class ApiClient {
             headers: {
                 'Content-Type': 'application/json',
             },
+            // Enable credentials for cross-origin cookie support
+            withCredentials: true,
         });
 
         console.log(`[API Client] Initialized with base URL: ${API_BASE_URL}`);
@@ -128,7 +130,11 @@ class ApiClient {
 
                 if (!isPublicAuthEndpoint) {
                     try {
-                        const token = await secureStorage.getToken();
+                        // On web, use synchronous getter to avoid race conditions
+                        const token = Platform.OS === 'web' 
+                            ? secureStorage.getTokenSync() 
+                            : await secureStorage.getToken();
+                        
                         if (token && config.headers) {
                             config.headers.Authorization = `Bearer ${token}`;
                         }
@@ -182,7 +188,11 @@ class ApiClient {
                     this.isRefreshing = true;
 
                     try {
-                        const refreshToken = await secureStorage.getRefreshToken();
+                        // On web, use synchronous getter to avoid race conditions
+                        const refreshToken = Platform.OS === 'web'
+                            ? secureStorage.getRefreshTokenSync()
+                            : await secureStorage.getRefreshToken();
+                        
                         if (!refreshToken) throw new Error('No refresh token');
 
                         const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {

@@ -23,6 +23,13 @@ const webStorage = {
         }
         return null;
     },
+    getItemSync: (key: string): string | null => {
+        // Synchronous access for web (no async/await needed)
+        if (typeof window !== 'undefined' && window.localStorage) {
+            return window.localStorage.getItem(key);
+        }
+        return null;
+    },
     deleteItem: (key: string) => {
         if (typeof window !== 'undefined' && window.localStorage) {
             window.localStorage.removeItem(key);
@@ -57,6 +64,14 @@ export const secureStorage = {
             console.error('Error getting token:', error);
             return webStorage.getItem(TOKEN_KEY);
         }
+    },
+
+    // Synchronous token getter for web (avoids race conditions in interceptors)
+    getTokenSync: (): string | null => {
+        if (!isSecureStoreAvailable) {
+            return webStorage.getItemSync(TOKEN_KEY);
+        }
+        return null; // Native requires async
     },
 
     deleteToken: async (): Promise<void> => {
@@ -97,6 +112,14 @@ export const secureStorage = {
             console.error('Error getting refresh token:', error);
             return webStorage.getItem(REFRESH_TOKEN_KEY);
         }
+    },
+
+    // Synchronous refresh token getter for web
+    getRefreshTokenSync: (): string | null => {
+        if (!isSecureStoreAvailable) {
+            return webStorage.getItemSync(REFRESH_TOKEN_KEY);
+        }
+        return null; // Native requires async
     },
 
     deleteRefreshToken: async (): Promise<void> => {
