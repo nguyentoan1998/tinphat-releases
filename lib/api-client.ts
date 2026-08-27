@@ -82,7 +82,7 @@ export function getErrorMessage(error: any, fallback: string): string {
         return 'Kết nối bị timeout, vui lòng kiểm tra mạng';
     }
     if (error?.code === 'ERR_NETWORK' || !error?.response) {
-        const platform = Platform.OS === 'android' ? 'Android' : 'iOS';
+        const platform = Platform.OS === 'android' ? 'Android' : Platform.OS === 'ios' ? 'iOS' : 'Web';
         return `Không thể kết nối đến máy chủ (${platform}). Vui lòng kiểm tra kết nối mạng hoặc liên hệ IT.`;
     }
     return fallback;

@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore, useNotificationStore } from '@/store';
 import { useChatStore } from '@/store/chat-store';
 import { secureStorage } from '@/lib/secure-storage';
-import * as SecureStore from 'expo-secure-store';
 const NOTIF_PREF_KEY = 'notif_enabled';
 import AppUpdateManager from '@/components/ui/AppUpdateManager';
 import NotificationToast from '@/components/ui/NotificationToast';
@@ -66,7 +65,7 @@ function RootLayoutNav() {
             const token = await secureStorage.getToken();
             if (token && !cancelled) {
                 // Load notification preference
-                const notifPref = await SecureStore.getItemAsync(NOTIF_PREF_KEY);
+                const notifPref = await secureStorage.getItem(NOTIF_PREF_KEY);
                 if (notifPref === 'false') {
                     useNotificationStore.getState().disableNotifications();
                 }

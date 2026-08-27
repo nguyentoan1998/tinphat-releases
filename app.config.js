@@ -39,6 +39,17 @@ module.exports = {
         NSMicrophoneUsageDescription: 'Ứng dụng cần quyền micro để gọi thoại và gọi video.',
         NSPhotoLibraryUsageDescription: 'Ứng dụng cần quyền truy cập thư viện ảnh để chọn ảnh nhân viên và CCCD.',
         NSPhotoLibraryAddUsageDescription: 'Ứng dụng cần quyền lưu ảnh vào thư viện.',
+        // App Transport Security (ATS) - Allow API domain
+        NSAppTransportSecurity: {
+          NSExceptionDomains: {
+            'api.tinphatmetech.online': {
+              NSExceptionAllowsInsecureHTTPLoads: false,
+              NSIncludesSubdomains: true,
+              NSExceptionRequiresForwardSecrecy: true,
+              NSExceptionMinimumTLSVersion: 'TLSv1.2',
+            },
+          },
+        },
       },
     },
     android: {
@@ -61,7 +72,9 @@ module.exports = {
     },
     web: {
       favicon: './assets/favicon.png',
+      bundler: 'metro',
     },
+    platforms: ['ios', 'android', 'web'],
     plugins: [
       'expo-router',
       'expo-secure-store',

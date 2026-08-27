@@ -24,7 +24,7 @@ import { getRoleLabel, isHomeMenuVisible, type UserRole } from '@/lib/role-permi
 import { employeeApi } from '@/lib/employee-api';
 import { useDarkDialog } from '@/components/ui/DarkDialog';
 import { getSocket } from '@/lib/socket';
-import * as SecureStore from 'expo-secure-store';
+import { secureStorage } from '@/lib/secure-storage';
 
 const NOTIF_PREF_KEY = 'notif_enabled';
 
@@ -127,7 +127,7 @@ export default function SettingsScreen() {
 
     // Load notification preference
     useEffect(() => {
-        SecureStore.getItemAsync(NOTIF_PREF_KEY)
+        secureStorage.getItem(NOTIF_PREF_KEY)
             .then(val => { if (val !== null) setNotifEnabled(val === 'true'); })
             .catch(() => { });
     }, []);
@@ -137,7 +137,7 @@ export default function SettingsScreen() {
     const handleToggleNotif = useCallback(async (val: boolean) => {
         setNotifEnabled(val);
         try {
-            await SecureStore.setItemAsync(NOTIF_PREF_KEY, String(val));
+            await secureStorage.setItem(NOTIF_PREF_KEY, String(val));
             if (!val) {
                 notifStore.disableNotifications();
             } else {

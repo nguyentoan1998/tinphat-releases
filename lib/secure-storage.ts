@@ -156,6 +156,33 @@ export const secureStorage = {
         }
     },
 
+    // Generic key-value storage (works on web via localStorage fallback)
+    getItem: async (key: string): Promise<string | null> => {
+        try {
+            if (isSecureStoreAvailable) {
+                return await SecureStore.getItemAsync(key);
+            } else {
+                return webStorage.getItem(key);
+            }
+        } catch (error) {
+            console.error(`Error getting item "${key}":`, error);
+            return webStorage.getItem(key);
+        }
+    },
+
+    setItem: async (key: string, value: string): Promise<void> => {
+        try {
+            if (isSecureStoreAvailable) {
+                await SecureStore.setItemAsync(key, value);
+            } else {
+                webStorage.setItem(key, value);
+            }
+        } catch (error) {
+            console.error(`Error setting item "${key}":`, error);
+            webStorage.setItem(key, value);
+        }
+    },
+
     // Clear all auth data
     clearAll: async (): Promise<void> => {
         await Promise.all([

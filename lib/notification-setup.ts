@@ -56,7 +56,7 @@ export function addNotificationTapListener(onNavigate: () => void) {
 }
 
 export async function checkInitialNotificationTap(onNavigate: () => void) {
-    if (!Notifications) return;
+    if (!Notifications || Platform.OS === 'web') return;
     const response = await Notifications.getLastNotificationResponseAsync();
     if (response) onNavigate();
 }
