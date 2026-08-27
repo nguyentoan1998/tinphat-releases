@@ -1,0 +1,24 @@
+const path = require('path');
+const { createWebpackConfigAsync } = require('@expo/webpack-config');
+
+module.exports = async function (env, argv) {
+  const config = await createWebpackConfigAsync(env, argv);
+  
+  // Set the context to the project root (mobile directory)
+  config.context = path.resolve(__dirname);
+  
+  // Ensure the app directory is resolvable by adding it to module resolution
+  config.resolve.modules = [
+    path.resolve(__dirname),           // /mobile
+    path.resolve(__dirname, 'app'),    // /mobile/app
+    'node_modules'
+  ].concat(config.resolve.modules || []);
+  
+  // Also add an alias for convenience if needed
+  config.resolve.alias = {
+    ...(config.resolve.alias || {}),
+    '@app': path.resolve(__dirname, 'app'),
+  };
+  
+  return config;
+};

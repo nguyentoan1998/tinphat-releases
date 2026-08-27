@@ -1,0 +1,30 @@
+const path = require('path');
+const createWebpackConfigAsync = require('@expo/webpack-config');
+
+module.exports = async function (env, argv) {
+  const config = await createWebpackConfigAsync(env, argv);
+
+  // Set the context to the project root (Tin phat app)
+  const projectRoot = path.resolve(__dirname, '..');
+  config.context = projectRoot;
+
+  // Set the app root for expo-router to the absolute path of the mobile/app directory
+  const appRoot = path.resolve(__dirname, '..', 'mobile', 'app');
+  process.env.EXPO_ROUTER_APP_ROOT = appRoot;
+
+  // Ensure the app directory is resolvable by adding it to module resolution
+  config.resolve.modules = [
+    projectRoot,                           // /Tin phat app
+    path.join(projectRoot, 'mobile'),      // /Tin phat app/mobile
+    path.join(projectRoot, 'mobile', 'app'), // /Tin phat app/mobile/app
+    'node_modules'
+  ].concat(config.resolve.modules || []);
+
+  // Also add an alias for convenience if needed
+  config.resolve.alias = {
+    ...(config.resolve.alias || {}),
+    '@app': path.resolve(projectRoot, 'mobile', 'app'),
+  };
+
+  return config;
+};

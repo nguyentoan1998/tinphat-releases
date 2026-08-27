@@ -33,6 +33,8 @@
         <category android:name="android.intent.category.BROWSABLE"/>
         <data android:scheme="stockflow"/>
         <data android:scheme="exp+stockflow"/>
+        <data android:scheme="tinphat"/>
+        <data android:scheme="exp+tinphat"/>
       </intent-filter>
     </activity>
   </application>
