@@ -1,10 +1,4 @@
 name = "tinphat-mobile-web"
 compatibility_date = "2026-02-13"
 compatibility_flags = ["nodejs_compat"]
-# Note: Set "Root directory" = "mobile" in Cloudflare Pages dashboard
-# Build command: npm run build:web
-# Output directory: dist
-
-[assets]
-directory = "./dist"
-not_found_handling = "single-page-application"
+pages_build_output_dir = "./dist"

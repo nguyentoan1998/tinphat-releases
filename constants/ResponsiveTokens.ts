@@ -4,7 +4,7 @@
  */
 
 import { Platform } from 'react-native';
-import { BREAKPOINTS, Breakpoint, ResponsiveValue, resolveResponsiveValue } from '@/hooks/useResponsive';
+import { BREAKPOINTS, Breakpoint, ResponsiveValue, resolveResponsiveValue } from '@/constants/ResponsiveTypes';
 import { Spacing as BaseSpacing, TouchTargets as BaseTouchTargets, BorderRadius as BaseBorderRadius, FontSizes as BaseFontSizes, FontWeights, Fonts, Shadows, ButtonStyles, CardStyles, FilterStyles, ValueStyles } from './Tokens';
 
 // ─── Base Spacing (8pt grid) ───
@@ -12,6 +12,7 @@ import { Spacing as BaseSpacing, TouchTargets as BaseTouchTargets, BorderRadius 
 export const Spacing = BaseSpacing;
 
 // Responsive spacing - scales up on larger screens
+// Mobile (xs) values are larger to match native app sizing on mobile web
 export const ResponsiveSpacing: Record<keyof typeof BaseSpacing, ResponsiveValue<number>> = {
   xs: { base: 4 },
   sm: { base: 8, md: 10 },
@@ -20,6 +21,13 @@ export const ResponsiveSpacing: Record<keyof typeof BaseSpacing, ResponsiveValue
   xl: { base: 24, md: 28, lg: 32, xl: 40 },
   xxl: { base: 32, md: 40, lg: 48, xl: 56 },
   xxxl: { base: 48, md: 56, lg: 64, xl: 80 },
+};
+
+// Touch targets - larger on mobile web for better touch experience
+export const ResponsiveTouchTargets = {
+  min: { base: 48, xs: 52, sm: 56 },      // Minimum touch target
+  comfortable: { base: 56, xs: 60, sm: 64 },  // Comfortable for primary actions
+  large: { base: 64, xs: 68, sm: 72 },       // Large for critical actions
 };
 
 // ─── Touch Targets (responsive) ───
@@ -38,17 +46,18 @@ export const ResponsiveBorderRadius: Record<keyof typeof BaseBorderRadius, Respo
 };
 
 // ─── Font Sizes (responsive - scale up on larger screens) ───
+// Mobile (xs) font sizes are larger to match native app sizing on mobile web
 export const FontSizes = BaseFontSizes;
 
 export const ResponsiveFontSizes: Record<keyof typeof BaseFontSizes, ResponsiveValue<number>> = {
-  xs: { base: 12, sm: 12, md: 13 },
-  sm: { base: 14, sm: 14, md: 15, lg: 16 },
-  base: { base: 16, sm: 16, md: 17, lg: 18 },
-  lg: { base: 18, sm: 18, md: 19, lg: 20, xl: 22 },
-  xl: { base: 20, sm: 20, md: 22, lg: 24, xl: 26 },
-  xxl: { base: 24, sm: 24, md: 26, lg: 28, xl: 32 },
-  xxxl: { base: 32, sm: 32, md: 36, lg: 40, xl: 48 },
-  huge: { base: 40, sm: 40, md: 48, lg: 56, xl: 64 },
+  xs: { base: 12, xs: 13, sm: 14, md: 15 },
+  sm: { base: 14, xs: 15, sm: 15, md: 16, lg: 17 },
+  base: { base: 16, xs: 17, sm: 17, md: 18, lg: 19 },
+  lg: { base: 18, xs: 19, sm: 19, md: 20, lg: 21, xl: 22 },
+  xl: { base: 20, xs: 21, sm: 21, md: 22, lg: 24, xl: 26 },
+  xxl: { base: 24, xs: 25, sm: 25, md: 26, lg: 28, xl: 32 },
+  xxxl: { base: 32, xs: 34, sm: 34, md: 36, lg: 40, xl: 48 },
+  huge: { base: 40, xs: 42, sm: 42, md: 48, lg: 56, xl: 64 },
 };
 
 // ─── Fonts ───
@@ -158,6 +167,7 @@ export default {
   Spacing,
   ResponsiveSpacing,
   TouchTargets,
+  ResponsiveTouchTargets,
   BorderRadius,
   ResponsiveBorderRadius,
   FontSizes,

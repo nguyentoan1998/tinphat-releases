@@ -14,7 +14,7 @@ import GlassButton from '@/components/ui/GlassButton';
 import TinPhatLogo from '@/components/TinPhatLogo';
 import { useDarkDialog } from '@/components/ui/DarkDialog';
 import { Spacing, FontSizes, FontWeights, BorderRadius, TouchTargets } from '@/constants/Tokens';
-import { ResponsiveSpacing, ResponsiveFontSizes, ResponsiveBorderRadius } from '@/constants/ResponsiveTokens';
+import { ResponsiveSpacing, ResponsiveFontSizes, ResponsiveBorderRadius, ResponsiveTouchTargets } from '@/constants/ResponsiveTokens';
 import { useResponsive } from '@/hooks/useResponsive';
 import { getErrorMessage } from '@/lib/api-client';
 import Constants from 'expo-constants';
@@ -37,6 +37,7 @@ export default function LoginScreen() {
     const rSpacing = getValues(ResponsiveSpacing);
     const rFontSizes = getValues(ResponsiveFontSizes);
     const rBorderRadius = getValues(ResponsiveBorderRadius);
+    const rTouchTargets = getValues(ResponsiveTouchTargets);
 
     const handleLogin = async () => {
         if (!email || !password) {

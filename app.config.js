@@ -73,6 +73,15 @@ module.exports = {
     web: {
       favicon: './assets/favicon.png',
       bundler: 'metro',
+      // Viewport meta tag for proper mobile web scaling
+      // This ensures the app renders at native app size, not desktop size
+      viewport: {
+        width: 'device-width',
+        initialScale: 1.0,
+        maximumScale: 1.0,
+        userScalable: false,
+        viewportFit: 'cover',
+      },
     },
     platforms: ['ios', 'android', 'web'],
     plugins: [
