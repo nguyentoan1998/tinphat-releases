@@ -107,7 +107,7 @@ export default function GlassDataScreen({
                     )}
                     <View style={styles.titleWrap}>
                         <Text style={[styles.title, { color: colors.textPrimary }]} numberOfLines={1}>{title}</Text>
-                        {subtitle && <Text style={[styles.subtitle, { color: colors.textMuted }]}>{subtitle}</Text>}
+                        {subtitle ? <Text style={[styles.subtitle, { color: colors.textMuted }]}>{subtitle}</Text> : null}
                     </View>
                     {showAdd && (
                         <Pressable style={[styles.addBtn, { backgroundColor: 'rgba(1, 86, 167, 0.15)' }]} onPress={onAdd}>

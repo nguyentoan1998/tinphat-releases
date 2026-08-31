@@ -360,18 +360,18 @@ export default function ProfileScreen() {
                                 {employee && (
                                     <Card title="Hình ảnh CCCD" delay={300}>
                                         <View style={s.idImages}>
-                                            {employee.idCardImages?.front && (
+                                            {employee.idCardImages?.front ? (
                                                 <View style={s.idImgWrap}>
                                                     <Image source={{ uri: employee.idCardImages.front }} style={[s.idImg, { borderColor: colors.cardBorder }]} resizeMode="cover" />
                                                     <Text style={[s.idImgLabel, { color: colors.textMuted }]}>Mặt trước</Text>
                                                 </View>
-                                            )}
-                                            {employee.idCardImages?.back && (
+                                            ) : null}
+                                            {employee.idCardImages?.back ? (
                                                 <View style={s.idImgWrap}>
                                                     <Image source={{ uri: employee.idCardImages.back }} style={[s.idImg, { borderColor: colors.cardBorder }]} resizeMode="cover" />
                                                     <Text style={[s.idImgLabel, { color: colors.textMuted }]}>Mặt sau</Text>
                                                 </View>
-                                            )}
+                                            ) : null}
                                         </View>
                                     </Card>
                                 )}

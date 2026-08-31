@@ -279,7 +279,7 @@ export default function TransferModal({
                             /* ====== VIEW MODE ====== */
                             <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
                                 {/* Reference ID */}
-                                {transfer?.referenceId && (
+                                {transfer?.referenceId ? (
                                     <View style={s.field}>
                                         <View style={s.labelRow}>
                                             <ArrowLeftRight size={14} color={colors.textMuted} />
@@ -291,10 +291,10 @@ export default function TransferModal({
                                             </Text>
                                         </View>
                                     </View>
-                                )}
+                                ) : null}
 
                                 {/* Created at */}
-                                {transfer?.createdAt && (
+                                {transfer?.createdAt ? (
                                     <View style={s.field}>
                                         <View style={s.labelRow}>
                                             <Calendar size={14} color={colors.textMuted} />
@@ -306,7 +306,7 @@ export default function TransferModal({
                                             </Text>
                                         </View>
                                     </View>
-                                )}
+                                ) : null}
 
                                 {/* From warehouse */}
                                 <View style={s.field}>

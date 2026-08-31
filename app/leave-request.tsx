@@ -235,12 +235,12 @@ function DetailModal({
                         </View>
 
                         {/* Employee info */}
-                        {emp?.Team?.name && (
+                        {emp?.Team?.name ? (
                             <View style={[dm.row, { backgroundColor: colors.inputBg, borderRadius: BorderRadius.md }]}>
                                 <Text style={[dm.rowLabel, { color: colors.textMuted }]}>Tổ</Text>
                                 <Text style={[dm.rowValue, { color: colors.textPrimary }]}>{emp.Team.name}</Text>
                             </View>
-                        )}
+                        ) : null}
 
                         {/* Leave type */}
                         <View style={[dm.row, { backgroundColor: colors.inputBg, borderRadius: BorderRadius.md }]}>

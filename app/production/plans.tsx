@@ -125,9 +125,9 @@ function PlanDetailModal({ plan: p, onClose }: { plan: ProductionPlan; onClose: 
                                             <Text style={{ fontSize: FontSizes.sm, fontWeight: FontWeights.semibold, color: colors.textPrimary }} numberOfLines={1}>
                                                 {order.orderNumber || order.id || `Lệnh #${i + 1}`}
                                             </Text>
-                                            {order.status && (
+                                            {order.status ? (
                                                 <Text style={{ fontSize: FontSizes.xs, marginTop: 2, color: colors.textMuted }}>{STATUS_MAP[order.status]?.label || order.status}</Text>
-                                            )}
+                                            ) : null}
                                         </View>
                                         {order.quantity && (
                                             <Text style={{ fontSize: FontSizes.xs, fontWeight: FontWeights.semibold, color: ACCENT }}>SL: {order.quantity}</Text>

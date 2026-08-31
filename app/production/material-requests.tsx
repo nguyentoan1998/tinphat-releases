@@ -99,9 +99,9 @@ export default function MaterialRequestsScreen() {
                                                 <View style={s.metaRow}>
                                                     <Text style={[s.dateT, { color: colors.textMuted }]}>{fmtDate(r.requestDate)}</Text>
                                                 </View>
-                                                {r.note && (
+                                                {r.note ? (
                                                     <Text style={[s.note, { color: colors.textMuted }]} numberOfLines={2}>{r.note}</Text>
-                                                )}
+                                                ) : null}
                                             </View>
                                         </View>
                                     </Animated.View>

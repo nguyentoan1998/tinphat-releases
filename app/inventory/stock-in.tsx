@@ -12,6 +12,7 @@ import { inventoryApi, StockMovement } from '@/lib/inventory-api';
 import { Spacing, FontSizes, FontWeights, Shadows } from '@/constants/Tokens';
 import { useThemeStore } from '@/store';
 import { ThemeColors } from '@/constants/ThemeColors';
+import PaginationFooter from '@/components/ui/PaginationFooter';
 import { useDarkDialog } from '@/components/ui/DarkDialog';
 
 const PAGE_SIZE = 20;
@@ -86,14 +87,14 @@ export default function StockInScreen() {
                         <Text style={[s.statusText, { color: '#10B981' }]}>Nhập kho</Text>
                     </View>
                     {/* Tên sản phẩm */}
-                    {item.Product?.name && (
+                    {item.Product?.name ? (
                         <View style={s.infoRow}>
                             <Package size={13} color="#0EA5E9" />
                             <Text style={[s.infoText, { color: colors.textPrimary, fontWeight: FontWeights.semibold }]} numberOfLines={2}>
                                 {item.Product.name}
                             </Text>
                         </View>
-                    )}
+                    ) : null}
                     {/* Công đoạn — chỉ hiển thị khi thuộc đúng sản phẩm */}
                     {item.RoutingStep?.Operation?.name && item.RoutingStep?.productId === item.productId && (
                         <View style={s.infoRow}>
@@ -125,27 +126,6 @@ export default function StockInScreen() {
     ), [colors]);
 
     const keyExtractor = useCallback((item: StockMovement) => item.id, []);
-
-    const ListFooter = () => {
-        if (loadingMore) {
-            return (
-                <View style={{ paddingVertical: Spacing.lg, alignItems: 'center' }}>
-                    <ActivityIndicator size="small" color="#0EA5E9" />
-                    <Text style={{ fontSize: FontSizes.xs, color: colors.textMuted, marginTop: 6 }}>Đang tải thêm...</Text>
-                </View>
-            );
-        }
-        if (!hasNext && items.length > 0) {
-            return (
-                <View style={{ paddingVertical: Spacing.md, alignItems: 'center' }}>
-                    <Text style={{ fontSize: FontSizes.xs, color: colors.textMuted }}>
-                        Đã hiển thị {items.length}/{total} phiếu
-                    </Text>
-                </View>
-            );
-        }
-        return <View style={{ height: 100 }} />;
-    };
 
     return (
         <View style={s.root}>
@@ -212,7 +192,16 @@ export default function StockInScreen() {
                         showsVerticalScrollIndicator={false}
                         onEndReached={loadMore}
                         onEndReachedThreshold={0.3}
-                        ListFooterComponent={ListFooter}
+                        ListFooterComponent={
+                            <PaginationFooter
+                                hasNextPage={hasNext}
+                                isFetchingNextPage={loadingMore}
+                                loadedCount={items.length}
+                                totalCount={total}
+                                onLoadMore={loadMore}
+                                accentColor="#10B981"
+                            />
+                        }
                         refreshControl={
                             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0EA5E9" />
                         }

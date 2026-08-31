@@ -314,12 +314,12 @@ export default function SalaryScreen() {
                                                 <View style={s.totalRow}>
                                                     <View>
                                                         <Text style={s.totalLabel}>THỰC NHẬN</Text>
-                                                        {sal.paidDate && <Text style={s.paidDate}>Đã trả: {fmtDate(sal.paidDate)}</Text>}
+                                                        {sal.paidDate ? <Text style={s.paidDate}>Đã trả: {fmtDate(sal.paidDate)}</Text> : null}
                                                     </View>
                                                     <Text style={[s.totalValue, { color: '#0156A7' }]}>{fmt(sal.totalSalary)}</Text>
                                                 </View>
 
-                                                {sal.note && <Text style={s.note} numberOfLines={2}>{sal.note}</Text>}
+                                                {sal.note ? <Text style={s.note} numberOfLines={2}>{sal.note}</Text> : null}
                                             </View>
                                         </View>
                                     </Animated.View>

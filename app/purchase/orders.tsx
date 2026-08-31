@@ -20,6 +20,7 @@ import { purchaseOrderApi, PurchaseOrder } from '@/lib/purchase-order-api';
 import { Spacing, FontSizes, FontWeights, BorderRadius } from '@/constants/Tokens';
 import { useThemeStore } from '@/store';
 import { ThemeColors } from '@/constants/ThemeColors';
+import PaginationFooter from '@/components/ui/PaginationFooter';
 import { useDarkDialog } from '@/components/ui/DarkDialog';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -322,7 +323,15 @@ export default function PurchaseOrdersScreen() {
                             initialNumToRender={10}
                             maxToRenderPerBatch={10}
                             windowSize={7}
-                            ListFooterComponent={<View style={{ height: 100 }} />}
+                            ListFooterComponent={
+                                <PaginationFooter
+                                    hasNextPage={false}
+                                    isFetchingNextPage={false}
+                                    loadedCount={filtered.length}
+                                    onLoadMore={undefined}
+                                    accentColor="#0156A7"
+                                />
+                            }
                         />
                     )}
                 </SafeAreaView>

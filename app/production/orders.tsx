@@ -142,9 +142,9 @@ export default function ProductionOrdersScreen() {
                                                     </View>
                                                     <StatusBadge label={st.label} color={st.color} />
                                                 </View>
-                                                {o.Product?.name && (
+                                                {o.Product?.name ? (
                                                     <Text style={[s.spec, { color: colors.textMuted }]}>{o.Product.name}</Text>
-                                                )}
+                                                ) : null}
                                                 <View style={s.metaRow}>
                                                     <Text style={[s.metaL, { color: colors.textMuted }]}>SL: {o.producedQty}/{o.quantity}</Text>
                                                     <Text style={[s.metaR, { color: st.color }]}>{pct}%</Text>

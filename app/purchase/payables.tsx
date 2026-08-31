@@ -12,6 +12,7 @@ import { accountsPayableApi, AccountPayable } from '@/lib/accounts-payable-api';
 import { Spacing, FontSizes, FontWeights } from '@/constants/Tokens';
 import { useThemeStore } from '@/store';
 import { ThemeColors } from '@/constants/ThemeColors';
+import PaginationFooter from '@/components/ui/PaginationFooter';
 import { useDarkDialog } from '@/components/ui/DarkDialog';
 
 const ACCENT = '#EC4899';
@@ -408,7 +409,15 @@ export default function PurchasePayablesScreen() {
                             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={ACCENT} />}
                             removeClippedSubviews
                             initialNumToRender={10}
-                            ListFooterComponent={<View style={{ height: 100 }} />}
+                            ListFooterComponent={
+                                <PaginationFooter
+                                    hasNextPage={false}
+                                    isFetchingNextPage={false}
+                                    loadedCount={filteredGroups.length}
+                                    onLoadMore={undefined}
+                                    accentColor="#0156A7"
+                                />
+                            }
                         />
                     )}
                 </SafeAreaView>

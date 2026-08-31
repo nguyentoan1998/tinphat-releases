@@ -19,6 +19,7 @@ const HOME_MENU_ROLES: Record<string, UserRole[]> = {
     'attendance': ['ADMIN', 'MANAGER', 'USER'],
     'product-outputs': ['ADMIN', 'MANAGER', 'USER'],
     'salary': ['ADMIN', 'MANAGER', 'USER'],
+    'product-prices': ['ADMIN', 'MANAGER', 'USER'],
     // Nhân sự (HR)
     'employees': ['ADMIN', 'MANAGER', 'USER'],
     'leave-request': ['ADMIN', 'MANAGER', 'USER'],

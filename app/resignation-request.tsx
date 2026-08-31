@@ -192,18 +192,18 @@ function DetailModal({
                             <Text style={[dm.rowLabel, { color: cfg.color }]}>Trạng thái</Text>
                             <Text style={[dm.rowValue, { color: cfg.color, fontWeight: FontWeights.bold }]}>{cfg.label}</Text>
                         </View>
-                        {emp?.Team?.name && (
+                        {emp?.Team?.name ? (
                             <View style={[dm.row, { backgroundColor: colors.inputBg, borderRadius: BorderRadius.md }]}>
                                 <Text style={[dm.rowLabel, { color: colors.textMuted }]}>Tổ</Text>
                                 <Text style={[dm.rowValue, { color: colors.textPrimary }]}>{emp.Team.name}</Text>
                             </View>
-                        )}
-                        {emp?.Position?.name && (
+                        ) : null}
+                        {emp?.Position?.name ? (
                             <View style={[dm.row, { backgroundColor: colors.inputBg, borderRadius: BorderRadius.md }]}>
                                 <Text style={[dm.rowLabel, { color: colors.textMuted }]}>Chức vụ</Text>
                                 <Text style={[dm.rowValue, { color: colors.textPrimary }]}>{emp.Position.name}</Text>
                             </View>
-                        )}
+                        ) : null}
                         <View style={[dm.row, { backgroundColor: colors.inputBg, borderRadius: BorderRadius.md }]}>
                             <Text style={[dm.rowLabel, { color: colors.textMuted }]}>Ngày làm việc cuối</Text>
                             <Text style={[dm.rowValue, { color: colors.textPrimary, fontWeight: FontWeights.semibold }]}>{fmtDate(item.lastWorkingDate)}</Text>

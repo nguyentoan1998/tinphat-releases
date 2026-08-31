@@ -140,7 +140,7 @@ function KpiCard({ title, value, sub, Icon, color, trend, delay, colors }: {
                 </View>
                 <Text style={[kpi.title, { color: colors.textMuted }]}>{title}</Text>
                 <Text style={[kpi.value, { color }]}>{value}</Text>
-                {sub && <Text style={[kpi.sub, { color: colors.textMuted }]}>{sub}</Text>}
+                {sub ? <Text style={[kpi.sub, { color: colors.textMuted }]}>{sub}</Text> : null}
                 {trend && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 3 }}>
                         {trend === 'up'

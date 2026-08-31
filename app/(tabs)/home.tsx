@@ -9,7 +9,7 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import {
     Bell, Settings,
     // Lương group
-    CalendarCheck, Boxes, Banknote,
+    CalendarCheck, Boxes, Banknote, Tag,
     // Nhân sự group
     Users, CalendarOff, LogOut,
     // Video group — mỗi loại một icon riêng
@@ -81,6 +81,14 @@ const ACTION_GROUPS: ActionGroup[] = [
                 iconColor: '#F59E0B',
                 bgColor: 'rgba(245,158,11,0.12)',
                 route: '/salary',
+            },
+            {
+                id: 'product-prices',
+                label: 'Đơn giá sản phẩm',
+                Icon: Tag,
+                iconColor: '#8B5CF6',
+                bgColor: 'rgba(139,92,246,0.12)',
+                route: '/product-prices',
             },
         ],
     },

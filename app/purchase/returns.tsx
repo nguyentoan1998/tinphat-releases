@@ -14,6 +14,7 @@ import { supplierApi, Supplier } from '@/lib/supplier-api';
 import { Spacing, FontSizes, FontWeights, BorderRadius } from '@/constants/Tokens';
 import { useThemeStore } from '@/store';
 import { ThemeColors } from '@/constants/ThemeColors';
+import PaginationFooter from '@/components/ui/PaginationFooter';
 import { useDarkDialog } from '@/components/ui/DarkDialog';
 
 const ACCENT = '#F59E0B';
@@ -335,7 +336,15 @@ export default function PurchaseReturnsScreen() {
                             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={ACCENT} />}
                             removeClippedSubviews
                             initialNumToRender={10}
-                            ListFooterComponent={<View style={{ height: 100 }} />}
+                            ListFooterComponent={
+                                <PaginationFooter
+                                    hasNextPage={false}
+                                    isFetchingNextPage={false}
+                                    loadedCount={filtered.length}
+                                    onLoadMore={undefined}
+                                    accentColor="#0156A7"
+                                />
+                            }
                         />
                     )}
                 </SafeAreaView>

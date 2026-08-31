@@ -75,7 +75,7 @@ export default function DarkDialog({
                 >
                     <View style={styles.content}>
                         <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
-                        {message && <Text style={[styles.message, { color: colors.textMuted }]}>{message}</Text>}
+                        {message ? <Text style={[styles.message, { color: colors.textMuted }]}>{message}</Text> : null}
                     </View>
 
                     <View style={[styles.divider, { backgroundColor: dividerColor }]} />

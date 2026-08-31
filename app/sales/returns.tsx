@@ -13,6 +13,7 @@ import { salesReturnApi, SalesReturn } from '@/lib/sales-return-api';
 import { Spacing, FontSizes, FontWeights, BorderRadius } from '@/constants/Tokens';
 import { useThemeStore } from '@/store';
 import { ThemeColors } from '@/constants/ThemeColors';
+import PaginationFooter from '@/components/ui/PaginationFooter';
 import { useDarkDialog } from '@/components/ui/DarkDialog';
 
 const ACCENT = '#F59E0B';
@@ -108,7 +109,7 @@ function ReturnDetailModal({ ret: r, onClose }: { ret: SalesReturn; onClose: () 
                                             <Text style={{ fontSize: FontSizes.xs, marginTop: 2, color: colors.textMuted }}>
                                                 {item.Product?.name || item.productId}
                                             </Text>
-                                            {item.reason && <Text style={{ fontSize: FontSizes.xs, marginTop: 2, color: '#F59E0B' }}>Lý do: {item.reason}</Text>}
+                                            {item.reason ? <Text style={{ fontSize: FontSizes.xs, marginTop: 2, color: '#F59E0B' }}>Lý do: {item.reason}</Text> : null}
                                         </View>
                                         <View style={{ alignItems: 'flex-end', gap: 2 }}>
                                             <Text style={{ fontSize: FontSizes.xs, fontWeight: FontWeights.semibold, color: ACCENT }}>SL: {item.quantity}</Text>
@@ -276,7 +277,15 @@ export default function SalesReturnsScreen() {
                             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={ACCENT} />}
                             removeClippedSubviews
                             initialNumToRender={10}
-                            ListFooterComponent={<View style={{ height: 100 }} />}
+                            ListFooterComponent={
+                                <PaginationFooter
+                                    hasNextPage={false}
+                                    isFetchingNextPage={false}
+                                    loadedCount={filtered.length}
+                                    onLoadMore={undefined}
+                                    accentColor="#10B981"
+                                />
+                            }
                         />
                     )}
                 </SafeAreaView>

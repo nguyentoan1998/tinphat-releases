@@ -344,11 +344,11 @@ export default function EmployeesScreen() {
                                                         {/* Contact row with call button */}
                                                         <View style={[s.contactRow, { borderTopColor: colors.cardBorder }]}>
                                                             <View style={s.contactInfo}>
-                                                                {emp.phone && <Text style={[s.contactT, { color: colors.textMuted }]}>{emp.phone}</Text>}
-                                                                {emp.User?.email && <Text style={[s.contactT, { color: colors.textMuted }]}>{emp.User.email}</Text>}
+                                                                {emp.phone ? <Text style={[s.contactT, { color: colors.textMuted }]}>{emp.phone}</Text> : null}
+                                                                {emp.User?.email ? <Text style={[s.contactT, { color: colors.textMuted }]}>{emp.User.email}</Text> : null}
                                                             </View>
                                                             <View style={s.actionBtns}>
-                                                                {emp.phone && (
+                                                                {emp.phone ? (
                                                                     <Pressable
                                                                         style={[s.callBtn]}
                                                                         onPress={(e) => { e.stopPropagation; handleCall(emp.phone!); }}
@@ -356,7 +356,7 @@ export default function EmployeesScreen() {
                                                                     >
                                                                         <PhoneCall size={16} color="#10B981" />
                                                                     </Pressable>
-                                                                )}
+                                                                ) : null}
                                                                 {isAdmin && (
                                                                     <Pressable
                                                                         style={s.deleteBtn}

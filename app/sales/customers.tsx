@@ -69,7 +69,7 @@ export default function CustomersScreen() {
                                         <View style={s.info}>
                                             <Text style={[s.name, { color: colors.textPrimary }]} numberOfLines={1}>{c.name}</Text>
                                             <Text style={[s.code, { color: colors.textMuted }]}>{c.code}</Text>
-                                            {c.phone && <View style={s.metaRow}><Phone size={11} color="#34D399" /><Text style={s.phone}>{c.phone}</Text></View>}
+                                            {c.phone ? <View style={s.metaRow}><Phone size={11} color="#34D399" /><Text style={s.phone}>{c.phone}</Text></View> : null}
                                         </View>
                                         <ChevronRight size={16} color={colors.chevronColor} />
                                     </View>

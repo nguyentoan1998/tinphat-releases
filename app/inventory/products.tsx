@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import { useInfiniteQuery } from '@tanstack/react-query';
 
 import { inventoryApi, Product } from '@/lib/inventory-api';
+import PaginationFooter from '@/components/ui/PaginationFooter';
 import { Spacing, FontSizes, FontWeights, BorderRadius } from '@/constants/Tokens';
 import { StatusBadge } from '@/components/ui/GlassDataScreen';
 import { useThemeStore } from '@/store';
@@ -243,15 +244,13 @@ export default function ProductsScreen() {
                             onEndReached={onEndReached}
                             onEndReachedThreshold={0.4}
                             ListFooterComponent={
-                                <View style={{ paddingVertical: 18 }}>
-                                    {productsQuery.isFetchingNextPage ? (
-                                        <Text style={[s.loadingMoreText, { color: colors.textMuted }]}>Đang tải thêm...</Text>
-                                    ) : productsQuery.hasNextPage ? (
-                                        <Text style={[s.loadingMoreText, { color: colors.textMuted }]}>Kéo để tải thêm</Text>
-                                    ) : (
-                                        <View style={{ height: 70 }} />
-                                    )}
-                                </View>
+                                <PaginationFooter
+                                    hasNextPage={!!productsQuery.hasNextPage}
+                                    isFetchingNextPage={productsQuery.isFetchingNextPage}
+                                    loadedCount={products.length}
+                                    onLoadMore={onEndReached}
+                                    accentColor="#6366F1"
+                                />
                             }
                         />
                     )}

@@ -14,6 +14,7 @@ import { supplierApi, Supplier } from '@/lib/supplier-api';
 import { Spacing, FontSizes, FontWeights, BorderRadius } from '@/constants/Tokens';
 import { useThemeStore } from '@/store';
 import { ThemeColors } from '@/constants/ThemeColors';
+import PaginationFooter from '@/components/ui/PaginationFooter';
 import { useDarkDialog } from '@/components/ui/DarkDialog';
 
 const ACCENT = '#8B5CF6';
@@ -71,7 +72,7 @@ function ReceiptDetailModal({ receipt: r, onClose }: { receipt: GoodsReceipt; on
                         <View style={{ paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20, backgroundColor: st.bg }}>
                             <Text style={{ fontSize: FontSizes.sm, fontWeight: FontWeights.bold, color: st.color }}>{st.label}</Text>
                         </View>
-                        {r.Warehouse?.name && <Text style={{ fontSize: FontSizes.sm, color: colors.textMuted }}>{r.Warehouse.name}</Text>}
+                        {r.Warehouse?.name ? <Text style={{ fontSize: FontSizes.sm, color: colors.textMuted }}>{r.Warehouse.name}</Text> : null}
                         <Text style={{ fontSize: FontSizes.sm, color: colors.textMuted }}>{r.Supplier?.name || '—'}</Text>
                     </Animated.View>
 
@@ -222,12 +223,12 @@ export default function PurchaseReceiptsScreen() {
                             <Truck size={13} color={colors.textMuted} />
                             <Text style={[s.infoText, { color: colors.textMuted }]} numberOfLines={1}>{r.Supplier?.name || '—'}</Text>
                         </View>
-                        {r.Warehouse?.name && (
+                        {r.Warehouse?.name ? (
                             <View style={s.infoRow}>
                                 <Building2 size={13} color={colors.textMuted} />
                                 <Text style={[s.infoText, { color: colors.textMuted }]} numberOfLines={1}>{r.Warehouse.name}</Text>
                             </View>
-                        )}
+                        ) : null}
                         {r.GoodsReceiptItem && r.GoodsReceiptItem.length > 0 && (
                             <View style={s.infoRow}>
                                 <Package size={13} color={colors.textMuted} />
@@ -336,7 +337,15 @@ export default function PurchaseReceiptsScreen() {
                             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={ACCENT} />}
                             removeClippedSubviews
                             initialNumToRender={10}
-                            ListFooterComponent={<View style={{ height: 100 }} />}
+                            ListFooterComponent={
+                                <PaginationFooter
+                                    hasNextPage={false}
+                                    isFetchingNextPage={false}
+                                    loadedCount={filtered.length}
+                                    onLoadMore={undefined}
+                                    accentColor="#0156A7"
+                                />
+                            }
                         />
                     )}
                 </SafeAreaView>

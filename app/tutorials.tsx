@@ -334,11 +334,11 @@ export default function TutorialsScreen() {
                                             </View>
 
                                             {/* Duration badge */}
-                                            {duration && (
+                                            {duration ? (
                                                 <View style={s.durationBadge}>
                                                     <Text style={s.durationText}>{duration}</Text>
                                                 </View>
-                                            )}
+                                            ) : null}
 
                                             {/* Source badge */}
                                             <View style={s.sourceBadge}>
@@ -355,20 +355,20 @@ export default function TutorialsScreen() {
                                                 </Text>
 
                                                 <View style={s.meta}>
-                                                    {teamName && (
+                                                    {teamName ? (
                                                         <View style={s.metaItem}>
                                                             <Users size={12} color={colors.textMuted} />
                                                             <Text style={[s.metaText, { color: colors.textSecondary }]}>{teamName}</Text>
                                                         </View>
-                                                    )}
+                                                    ) : null}
                                                     <Text style={[s.metaDot, { color: colors.textMuted }]}>•</Text>
                                                     <Text style={[s.metaText, { color: colors.textSecondary }]}>{timeAgo}</Text>
                                                 </View>
-                                                {tutorial.description && (
+                                                {tutorial.description ? (
                                                     <Text style={[s.description, { color: colors.textMuted }]} numberOfLines={1}>
                                                         {tutorial.description}
                                                     </Text>
-                                                )}
+                                                ) : null}
                                             </View>
 
                                             {/* More menu for admin */}

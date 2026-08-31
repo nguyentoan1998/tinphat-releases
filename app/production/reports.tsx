@@ -59,7 +59,7 @@ function KpiCard({ label, value, sub, Icon, color, delay, colors }: any) {
                 <View style={[kpi.icon, { backgroundColor: color + '20' }]}><Icon size={18} color={color} /></View>
                 <Text style={[kpi.label, { color: colors.textMuted }]}>{label}</Text>
                 <Text style={[kpi.value, { color }]}>{value}</Text>
-                {sub && <Text style={[kpi.sub, { color: colors.textMuted }]}>{sub}</Text>}
+                {sub ? <Text style={[kpi.sub, { color: colors.textMuted }]}>{sub}</Text> : null}
             </View>
         </Animated.View>
     );

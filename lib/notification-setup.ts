@@ -4,11 +4,13 @@ import { notificationApi } from './notification-api';
 let Notifications: any = null;
 let Device: any = null;
 
-try {
-    Notifications = require('expo-notifications');
-    Device = require('expo-device');
-} catch {
-    // expo-notifications không hỗ trợ Expo Go SDK 53+
+if (Platform.OS !== 'web') {
+    try {
+        Notifications = require('expo-notifications');
+        Device = require('expo-device');
+    } catch {
+        // expo-notifications không hỗ trợ Expo Go SDK 53+
+    }
 }
 
 export async function registerForPushNotifications() {

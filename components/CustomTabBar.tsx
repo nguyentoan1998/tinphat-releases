@@ -94,10 +94,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.3)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
+    boxShadow: '0px 8px 12px rgba(0,0,0,0.25)',
     elevation: 8,
   },
   blur: {
@@ -127,10 +124,7 @@ const styles = StyleSheet.create({
   },
   homeTabActive: {
     backgroundColor: '#0156A7',
-    shadowColor: '#0156A7',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
+    boxShadow: '0px 4px 8px rgba(1,86,167,0.4)',
     elevation: 6,
   },
   badge: {

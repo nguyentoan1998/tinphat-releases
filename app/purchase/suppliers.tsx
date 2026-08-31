@@ -79,7 +79,7 @@ export default function SuppliersScreen() {
                                                     <StatusBadge label={st.label} color={st.color} />
                                                 </View>
                                                 <Text style={[s.code, { color: colors.textMuted }]}>{sup.code}</Text>
-                                                {sup.phone && <View style={s.metaRow}><Phone size={11} color="#34D399" /><Text style={s.phone}>{sup.phone}</Text></View>}
+                                                {sup.phone ? <View style={s.metaRow}><Phone size={11} color="#34D399" /><Text style={s.phone}>{sup.phone}</Text></View> : null}
                                             </View>
                                             <ChevronRight size={16} color={colors.chevronColor} />
                                         </View>

@@ -1,9 +1,8 @@
-// Product Outputs Screen — Glassmorphism + Infinite Scroll (Tổng hợp sản phẩm)
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, RefreshControl, ActivityIndicator, TextInput, Modal, FlatList, ListRenderItem, Share, Alert } from 'react-native';
+// Product Outputs Screen — Simplified, Stable, No Flicker
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { View, Text, StyleSheet, Pressable, RefreshControl, ActivityIndicator, TextInput, Modal, FlatList, ListRenderItem, Share, Alert, Keyboard } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
-import { Package, ChevronLeft, RefreshCw, CheckCircle, Clock, Banknote, SquareDashed, User, CalendarDays, FileText, Search, Users, X, Settings2, Eye, EyeOff, Save, Send } from 'lucide-react-native';
+import { Package, ChevronLeft, ChevronDown, RefreshCw, CheckCircle, Clock, Banknote, SquareDashed, User, CalendarDays, FileText, Search, Users, X, Settings2, Eye, EyeOff, Save, Send } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
@@ -14,6 +13,7 @@ import { useAuthStore, useThemeStore } from '@/store';
 import { productOutputApi, ProductOutput } from '@/lib/product-output-api';
 import { teamApi, Team } from '@/lib/team-api';
 import { employeeApi, Employee } from '@/lib/employee-api';
+import PaginationFooter from '@/components/ui/PaginationFooter';
 
 const toLocalISODate = (date: Date) => {
     const y = date.getFullYear();
@@ -37,9 +37,288 @@ type StatusFilter = 'all' | 'verified' | 'pending';
 const PAGE_SIZE = 50;
 type ViewMode = 'PERSONAL' | 'TEAM';
 
+// ─── OutputCard Component (memoized, no entering animation) ───
+interface OutputCardProps {
+    out: ProductOutput;
+    i: number;
+    colors: any;
+    showEmployee: boolean;
+    fmtCurrency: (n: number | string) => string;
+}
+
+const OutputCard = React.memo(function OutputCard({ out, i, colors, showEmployee, fmtCurrency }: OutputCardProps) {
+    return (
+        <View style={styles.card}>
+            <View style={styles.cardInner}>
+                {/* Top: icon + title + status */}
+                <View style={styles.cardTop}>
+                    <View style={[
+                        styles.cardIconWrap,
+                        { backgroundColor: out.verified ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)' }
+                    ]}>
+                        <Package size={16} color={out.verified ? '#10B981' : '#F59E0B'} />
+                    </View>
+                    <View style={styles.cardTitleWrap}>
+                        <Text style={[styles.cTitle, { color: colors.textPrimary }]} numberOfLines={1}>
+                            {out.Product?.name || out.productId}
+                        </Text>
+                        {out.Product?.name ? (
+                            <Text style={[styles.cSub, { color: colors.textSecondary }]} numberOfLines={1}>
+                                {out.Product?.code || 'Mã SP'}
+                            </Text>
+                        ) : null}
+                    </View>
+                    <View style={[
+                        styles.statusBadge,
+                        { backgroundColor: out.verified ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)' }
+                    ]}>
+                        {out.verified ? <CheckCircle size={13} color="#10B981" /> : <Clock size={13} color="#F59E0B" />}
+                        <Text style={[styles.statusText, { color: out.verified ? '#10B981' : '#F59E0B' }]}>
+                            {out.verified ? 'Xác nhận' : 'Chờ duyệt'}
+                        </Text>
+                    </View>
+                </View>
+
+                {/* Meta: employee + date + order */}
+                <View style={[styles.metaRow, { borderTopColor: colors.divider }]}>
+                    {showEmployee && (
+                        <View style={styles.metaItem}>
+                            <User size={12} color={colors.textMuted} />
+                            <Text style={[styles.metaText, { color: colors.textSecondary }]} numberOfLines={1}>
+                                {out.Employee?.fullName || out.employeeId}
+                            </Text>
+                        </View>
+                    )}
+                    <View style={styles.metaItem}>
+                        <CalendarDays size={12} color={colors.textMuted} />
+                        <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+                            {new Date(out.outputDate).toLocaleDateString('vi-VN')}
+                        </Text>
+                    </View>
+                    {out.ProductionOrder && (
+                        <View style={styles.metaItem}>
+                            <FileText size={12} color={colors.textMuted} />
+                            <Text style={[styles.metaText, { color: '#38BDF8' }]}>
+                                {out.ProductionOrder.orderNumber}
+                            </Text>
+                        </View>
+                    )}
+                </View>
+
+                {/* Detail: qty + salary */}
+                <View style={[styles.detailRow, { borderTopColor: colors.divider }]}>
+                    <View style={styles.detItem}>
+                        <Text style={[styles.detL, { color: colors.textMuted }]}>Số lượng</Text>
+                        <Text style={[styles.detV, { color: '#F59E0B' }]}>{out.quantity || 0} SP</Text>
+                    </View>
+                    <View style={[styles.detDivider, { backgroundColor: colors.divider }]} />
+                    <View style={styles.detItem}>
+                        <Text style={[styles.detL, { color: colors.textMuted }]}>Lương khoán</Text>
+                        <Text style={[styles.detV, { color: '#818CF8' }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                            {fmtCurrency(out.salaryAmount || 0)}
+                        </Text>
+                    </View>
+                </View>
+
+                {/* Note */}
+                {out.note ? (
+                    <View style={[styles.noteWrap, { backgroundColor: 'rgba(0,0,0,0.03)', borderColor: colors.cardBorder }]}>
+                        <Text style={[styles.note, { color: colors.textSecondary }]}>{out.note}</Text>
+                    </View>
+                ) : null}
+            </View>
+        </View>
+    );
+}, (prev, next) => prev.out.id === next.out.id && prev.i === next.i);
+
+// ─── Employee Autocomplete Component (Admin only in TEAM mode) ───
+interface EmployeeAutocompleteProps {
+    employees: Employee[];
+    selectedEmployeeId: string;
+    onSelect: (id: string) => void;
+    colors: any;
+}
+
+function EmployeeAutocomplete({ employees, selectedEmployeeId, onSelect, colors, isOpen, setIsOpen }: EmployeeAutocompleteProps & { isOpen: boolean; setIsOpen: (v: boolean) => void }) {
+    const [isFocused, setIsFocused] = useState(false);
+    const [filterText, setFilterText] = useState('');
+    const dropdownRef = useRef<View>(null);
+
+    const filteredEmployees = useMemo(() => {
+        if (!filterText) return employees;
+        const lower = filterText.toLowerCase();
+        return employees.filter(e =>
+            e.fullName.toLowerCase().includes(lower) ||
+            e.employeeCode?.toLowerCase().includes(lower)
+        );
+    }, [employees, filterText]);
+
+    const displayOptions = [{ id: '', fullName: 'Tất cả nhân viên', employeeCode: '' }, ...filteredEmployees];
+
+    const handleSelect = (id: string) => {
+        onSelect(id);
+        setIsOpen(false);
+        setFilterText('');
+    };
+
+    return (
+        <View style={{ flex: 1, zIndex: 1000, overflow: 'visible' }}>
+            <Pressable
+                style={[styles.autocompleteTrigger, {
+                    borderColor: selectedEmployeeId ? '#F59E0B' : colors.cardBorder,
+                    backgroundColor: selectedEmployeeId ? 'rgba(245,158,11,0.1)' : colors.inputBg,
+                    flexDirection: 'row', gap: 6, paddingHorizontal: 12, width: '100%', justifyContent: 'space-between',
+                }]}
+                onPress={() => setIsOpen(!isOpen)}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+            >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                    <User size={16} color={selectedEmployeeId ? '#F59E0B' : colors.textMuted} />
+                    <Text style={{ fontSize: FontSizes.sm, color: selectedEmployeeId ? '#F59E0B' : colors.textSecondary, flex: 1 }} numberOfLines={1}>
+                        {employees.find(e => e.id === selectedEmployeeId)?.fullName || 'Chọn nhân viên'}
+                    </Text>
+                </View>
+                <ChevronDown size={14} color={colors.textMuted} />
+            </Pressable>
+
+            {isOpen && (
+                <>
+                    <Pressable onPress={() => setIsOpen(false)} style={styles.dropdownOverlay} />
+                    <View style={[styles.dropdown, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
+                    <TextInput
+                        style={styles.dropdownSearch}
+                        placeholder="Tìm nhân viên..."
+                        placeholderTextColor={colors.textMuted}
+                        value={filterText}
+                        onChangeText={setFilterText}
+                        onFocus={() => setIsFocused(true)}
+                        autoFocus
+                    />
+                    <FlatList
+                        data={displayOptions}
+                        keyExtractor={i => i.id}
+                        contentContainerStyle={{ paddingBottom: Spacing.xl }}
+                        renderItem={({ item }) => (
+                            <Pressable
+                                style={{
+                                    flexDirection: 'row', alignItems: 'center',
+                                    paddingVertical: Spacing.md, paddingHorizontal: Spacing.xl,
+                                    borderBottomWidth: 1, borderBottomColor: colors.divider
+                                }}
+                                onPress={() => handleSelect(item.id)}
+                            >
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{
+                                        fontSize: FontSizes.base,
+                                        color: selectedEmployeeId === item.id ? '#F59E0B' : colors.textPrimary,
+                                        fontWeight: selectedEmployeeId === item.id ? 'bold' : 'normal'
+                                    }}>
+                                        {item.fullName}
+                                    </Text>
+                                    {item.employeeCode ? <Text style={{ fontSize: FontSizes.xs, color: colors.textMuted }}>{item.employeeCode}</Text> : null}
+                                </View>
+                                {selectedEmployeeId === item.id && <CheckCircle size={18} color="#F59E0B" />}
+                            </Pressable>
+                        )}
+                    />
+                </View>
+            </>)}
+        </View>
+    );
+}
+
+// ─── Team Autocomplete Component ───
+interface TeamAutocompleteProps {
+    teams: Team[];
+    selectedTeamId: string;
+    onSelect: (id: string) => void;
+    colors: any;
+}
+
+function TeamAutocomplete({ teams, selectedTeamId, onSelect, colors, isOpen, setIsOpen }: TeamAutocompleteProps & { isOpen: boolean; setIsOpen: (v: boolean) => void }) {
+    const [filterText, setFilterText] = useState('');
+
+    const filteredTeams = useMemo(() => {
+        if (!filterText) return teams;
+        const lower = filterText.toLowerCase();
+        return teams.filter(t => t.name.toLowerCase().includes(lower));
+    }, [teams, filterText]);
+
+    const displayOptions = [{ id: '', name: 'Tất cả tổ' } as any, ...filteredTeams];
+    const selectedTeam = teams.find(t => t.id === selectedTeamId);
+
+    const handleSelect = (id: string) => {
+        onSelect(id);
+        setIsOpen(false);
+        setFilterText('');
+    };
+
+    return (
+        <View style={{ flex: 1, zIndex: 1000, overflow: 'visible' }}>
+            <Pressable
+                style={[styles.autocompleteTrigger, {
+                    borderColor: selectedTeamId ? '#818CF8' : colors.cardBorder,
+                    backgroundColor: selectedTeamId ? 'rgba(129,140,248,0.1)' : colors.inputBg,
+                    flexDirection: 'row', gap: 6, paddingHorizontal: 12, width: '100%', justifyContent: 'space-between',
+                }]}
+                onPress={() => setIsOpen(!isOpen)}
+            >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                    <Users size={16} color={selectedTeamId ? '#818CF8' : colors.textMuted} />
+                    <Text style={{ fontSize: FontSizes.sm, color: selectedTeam ? '#818CF8' : colors.textSecondary, flex: 1 }} numberOfLines={1}>
+                        {selectedTeam?.name || 'Chọn tổ'}
+                    </Text>
+                </View>
+                <ChevronDown size={14} color={colors.textMuted} />
+            </Pressable>
+
+            {isOpen && (
+                <>
+                    <Pressable onPress={() => setIsOpen(false)} style={styles.dropdownOverlay} />
+                    <View style={[styles.dropdown, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]}>
+                    <TextInput
+                        style={[styles.dropdownSearch, { color: colors.textPrimary, borderBottomColor: colors.divider }]}
+                        placeholder="Tìm tổ..."
+                        placeholderTextColor={colors.textMuted}
+                        value={filterText}
+                        onChangeText={setFilterText}
+                        autoFocus
+                    />
+                    <FlatList
+                        data={displayOptions}
+                        keyExtractor={i => i.id || 'all'}
+                        contentContainerStyle={{ paddingBottom: Spacing.xl }}
+                        renderItem={({ item }) => (
+                            <Pressable
+                                style={{
+                                    flexDirection: 'row', alignItems: 'center',
+                                    paddingVertical: Spacing.md, paddingHorizontal: Spacing.xl,
+                                    borderBottomWidth: 1, borderBottomColor: colors.divider
+                                }}
+                                onPress={() => handleSelect(item.id)}
+                            >
+                                <Text style={{
+                                    flex: 1,
+                                    fontSize: FontSizes.base,
+                                    color: selectedTeamId === item.id ? '#818CF8' : colors.textPrimary,
+                                    fontWeight: selectedTeamId === item.id ? '700' as const : '400' as const
+                                }}>
+                                    {item.name}
+                                </Text>
+                                {selectedTeamId === item.id && <CheckCircle size={18} color="#818CF8" />}
+                            </Pressable>
+                        )}
+                    />
+                </View>
+            </>
+            )}
+        </View>
+    );
+}
 export default function ProductOutputsScreen() {
     const router = useRouter();
-    const { user } = useAuthStore();
+    const { user, isAuthenticated } = useAuthStore();
     const { isDark } = useThemeStore();
     const colors = ThemeColors.light;
     const { showDialog, DialogComponent } = useDarkDialog();
@@ -48,7 +327,7 @@ export default function ProductOutputsScreen() {
     const isManager = user?.role === 'MANAGER';
     const canViewTeam = isAdmin || isManager;
 
-    // ADMIN & MANAGER default TEAM (auto-scoped), USER defaults PERSONAL
+    // View mode: PERSONAL (my outputs) or TEAM (team outputs)
     const [viewMode, setViewMode] = useState<ViewMode>(canViewTeam ? 'TEAM' : 'PERSONAL');
 
     // Filters
@@ -56,41 +335,62 @@ export default function ProductOutputsScreen() {
     const [selectedMonth, setSelectedMonth] = useState<number>(now.getMonth() + 1);
     const [selectedYear] = useState<number>(now.getFullYear());
     const [selectedTeamId, setSelectedTeamId] = useState<string>('');
-    const [searchText, setSearchText] = useState('');
-    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [searchInputValue, setSearchInputValue] = useState(''); // Local input state (no flicker)
+    const [debouncedSearch, setDebouncedSearch] = useState(''); // Debounced for API
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-    const [showVisibilityModal, setShowVisibilityModal] = useState(false);
-    const [savingVisibility, setSavingVisibility] = useState(false);
 
+    // Employee filter (Admin only in TEAM mode)
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
+    const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false);
+
+    // Teams & employees
     const [teams, setTeams] = useState<Team[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
-    const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
-    const [showEmployeeModal, setShowEmployeeModal] = useState(false);
+    const [isTeamOpen, setIsTeamOpen] = useState(false);
+    const [isEmployeeOpen, setIsEmployeeOpen] = useState(false);
 
+    // Search input ref for focus management
+    const searchInputRef = useRef<TextInput>(null);
+
+    // Load teams & employees once — only when authenticated
     useEffect(() => {
+        if (!isAuthenticated) return;
         employeeApi.getEmployees().then(setEmployees).catch(() => { });
         teamApi.getTeams().then(data => {
             const resolvedData = Array.isArray(data) ? data : (data as any)?.data || [];
             setTeams(resolvedData.map((t: any) => ({ ...t, outputVisible: t.outputVisible ?? true })));
         }).catch(() => { });
+    }, [isAuthenticated]);
+
+    // Debounce search (800ms) - only update debouncedSearch for API
+    useEffect(() => {
+        const t = setTimeout(() => setDebouncedSearch(searchInputValue), 800);
+        return () => clearTimeout(t);
+    }, [searchInputValue]);
+
+    // Handle search input change - local state only, no flicker
+    const handleSearchChange = useCallback((text: string) => {
+        setSearchInputValue(text);
     }, []);
 
-    useEffect(() => {
-        const t = setTimeout(() => setDebouncedSearch(searchText), 400);
-        return () => clearTimeout(t);
-    }, [searchText]);
+    // ─── Effective filters for API ───
+    const myEmployeeId = (user as any)?.employeeId || '';
 
-    // Filters based on viewMode:
-    // - PERSONAL: always filter by current user's employeeId
-    // - TEAM + ADMIN: send teamId if selected, or none for all
-    // - TEAM + MANAGER: send nothing — backend auto-scopes by their team
-    const effectiveEmployeeId = viewMode === 'PERSONAL'
-        ? ((user as any)?.employeeId || '')
-        : '';
-    const effectiveTeamId = (isAdmin && viewMode === 'TEAM')
-        ? selectedTeamId
-        : '';
+    // In PERSONAL mode: always filter by my employeeId
+    // In TEAM mode (Admin): use selectedEmployeeId if set
+    // In TEAM mode (Manager): no employee filter (sees whole team)
+    const effectiveEmployeeId = useMemo(() => {
+        if (viewMode === 'PERSONAL') return myEmployeeId;
+        if (isAdmin && selectedEmployeeId) return selectedEmployeeId;
+        return ''; // Manager or Admin without filter
+    }, [viewMode, isAdmin, myEmployeeId, selectedEmployeeId]);
 
+    const effectiveTeamId = useMemo(() => {
+        if (!isAdmin || viewMode !== 'TEAM') return '';
+        return selectedTeamId;
+    }, [isAdmin, viewMode, selectedTeamId]);
+
+    // ─── Queries ───
     const outputsQuery = useInfiniteQuery({
         queryKey: [
             'product-outputs',
@@ -98,7 +398,7 @@ export default function ProductOutputsScreen() {
             selectedYear,
             effectiveTeamId,
             statusFilter,
-            debouncedSearch,
+            debouncedSearch, // Use debounced search
             effectiveEmployeeId,
             viewMode,
         ],
@@ -119,22 +419,14 @@ export default function ProductOutputsScreen() {
         },
         initialPageParam: 1,
         getNextPageParam: (lastPage: any) => {
-            if (lastPage?.meta?.hasNext) {
-                return lastPage.meta.page + 1;
-            }
+            if (lastPage?.meta?.hasNext) return lastPage.meta.page + 1;
             return undefined;
         },
+        staleTime: 15000, // Cache for 15s
+        enabled: isAuthenticated,
     });
 
-    const isTeamHidden = useMemo(() => {
-        if (isAdmin) return false;
-        const myTeamId = (user as any)?.Employee?.teamId || (user as any)?.teamId;
-        const myTeam = teams.find(t => t.id === myTeamId);
-        return !!(myTeam && !myTeam.outputVisible);
-    }, [teams, user, isAdmin]);
-
-
-    // ── Stats query: limit=0 to get accurate totals across all pages ──
+    // Stats query (for totals)
     const statsQuery = useQuery({
         queryKey: [
             'product-outputs-stats',
@@ -160,27 +452,24 @@ export default function ProductOutputsScreen() {
             });
         },
         staleTime: 30000,
+        enabled: isAuthenticated && !outputsQuery.isLoading, // Wait for main query and require auth
     });
 
     const statsAll = useMemo(() => {
-        if (isTeamHidden) return [];
-        const statsData = statsQuery.data;
-        if (!statsData) return [];
-        return Array.isArray(statsData) ? statsData : ((statsData as any)?.data || []);
-    }, [statsQuery.data, isTeamHidden]);
+        const data = statsQuery.data;
+        if (!data) return [];
+        return Array.isArray(data) ? data : ((data as any)?.data || []);
+    }, [statsQuery.data]);
 
     const allOutputs = useMemo(() => {
-        if (isTeamHidden) return [];
-        // Extract array from paginated response wrappers
-        return outputsQuery.data?.pages.flatMap((p: any) => {
-            return Array.isArray(p) ? p : (p?.data || []);
-        }) ?? [];
-    }, [outputsQuery.data, isTeamHidden]);
+        return outputsQuery.data?.pages.flatMap((p: any) => Array.isArray(p) ? p : (p?.data || [])) ?? [];
+    }, [outputsQuery.data]);
 
     const totalQty = useMemo(() => statsAll.reduce((s: number, o: any) => s + (Number(o.quantity) || 0), 0), [statsAll]);
     const totalSalary = useMemo(() => statsAll.reduce((s: number, o: any) => s + (Number(o.salaryAmount) || 0), 0), [statsAll]);
     const verifiedCount = useMemo(() => statsAll.filter((o: any) => o.verified).length, [statsAll]);
 
+    // ─── Actions ───
     const onRefresh = useCallback(async () => {
         await Promise.all([
             outputsQuery.refetch(),
@@ -199,16 +488,11 @@ export default function ProductOutputsScreen() {
             Alert.alert('Thông báo', 'Không có dữ liệu để gửi.');
             return;
         }
-
         const sorted = [...statsAll].sort((a: any, b: any) =>
             new Date(a.outputDate).getTime() - new Date(b.outputDate).getTime()
         );
 
         const periodLabel = selectedMonth === 0 ? `Năm ${selectedYear}` : fmtMonth(selectedMonth, selectedYear);
-
-        // Lấy đơn giá đúng theo loại:
-        // - Công nhật: đơn giá = salaryAmount / quantity (lương/ngày)
-        // - Khoán: RoutingStep.salaryPrice > 0, fallback Product.salaryPrice
         const getUnitPrice = (item: any): number => {
             if (item.isDailyRate) {
                 const qty = Number(item.quantity) || 1;
@@ -219,7 +503,6 @@ export default function ProductOutputsScreen() {
             return Number(item.Product?.salaryPrice || 0);
         };
 
-        // Hàm căn chuỗi
         const pad = (s: string, len: number) => {
             const str = String(s);
             return str.length >= len ? str.substring(0, len) : str + ' '.repeat(len - str.length);
@@ -255,258 +538,248 @@ export default function ProductOutputsScreen() {
 
         try {
             await Share.share({ message });
-        } catch (error: any) {
+        } catch {
             Alert.alert('Lỗi', 'Không thể chia sẻ báo cáo.');
         }
     };
 
-    const toggleTeamVisibility = async (teamId: string, current: boolean) => {
-        setSavingVisibility(true);
-        try {
-            await teamApi.updateTeam(teamId, { outputVisible: !current });
-            setTeams(prev => prev.map(t => t.id === teamId ? { ...t, outputVisible: !current } : t));
-        } catch (e: any) {
-            showDialog('Lỗi', e.response?.data?.message || 'Không thể cập nhật cài đặt');
-        } finally {
-            setSavingVisibility(false);
-        }
-    };
-
-    const renderItem: ListRenderItem<ProductOutput> = useCallback(({ item, index }) => (
-        <OutputCard out={item} i={index} colors={colors} showEmployee={viewMode === 'TEAM'} />
+    // ─── Render Item (stable key) ───
+    const renderItem: ListRenderItem<any> = useCallback(({ item, index }) => (
+        <OutputCard out={item} i={index} colors={colors} showEmployee={viewMode === 'TEAM'} fmtCurrency={fmtCurrency} />
     ), [colors, viewMode]);
 
-    const keyExtractor = useCallback((item: ProductOutput, index: number) => `${item.id}_${index}`, []);
+    const keyExtractor = useCallback((item: any, index: number) => {
+        // item.id should be unique, fallback to index to avoid duplicate key warning on web
+        return item.id ? `${item.id}_${index}` : `idx_${index}`;
+    }, []);
 
-    const Footer = () => {
-        if (outputsQuery.isFetchingNextPage) {
-            return (
-                <View style={{ padding: Spacing.md, alignItems: 'center' }}>
-                    <ActivityIndicator size="small" color="#14B8A6" />
-                </View>
-            );
-        }
-        return <View style={{ height: 100 }} />;
-    };
+    const Footer = () => (
+        <PaginationFooter
+            hasNextPage={!!outputsQuery.hasNextPage}
+            isFetchingNextPage={outputsQuery.isFetchingNextPage}
+            loadedCount={allOutputs.length}
+            totalCount={statsAll.length || undefined}
+            onLoadMore={onEndReached}
+            accentColor="#14B8A6"
+        />
+    );
 
     const EmptyLayer = () => {
         if (outputsQuery.isLoading) {
             return (
-                <View style={s.emptyW}>
+                <View style={styles.emptyW}>
                     <ActivityIndicator size="large" color="#14B8A6" />
-                    <Text style={[s.loadingText, { color: colors.textMuted }]}>Đang tải dữ liệu...</Text>
+                    <Text style={[styles.loadingText, { color: colors.textMuted }]}>Đang tải dữ liệu...</Text>
                 </View>
             );
         }
-
-        if (isTeamHidden) {
-            return (
-                <View style={s.emptyW}>
-                    <LinearGradient colors={['#EF4444', '#F87171']} style={s.emptyIcon}>
-                        <EyeOff size={32} color="#FFF" />
-                    </LinearGradient>
-                    <Text style={[s.emptyTitle, { color: colors.textPrimary }]}>Sản lượng đang được ẩn</Text>
-                    <Text style={[s.emptyT, { color: colors.textMuted }]}>Quản trị viên đã tắt hiển thị sản lượng cho team của bạn</Text>
-                </View>
-            );
-        }
-
         return (
-            <View style={s.emptyW}>
-                <LinearGradient colors={['#14B8A6', '#34D399']} style={s.emptyIcon}>
-                    <Package size={32} color="#FFF" />
-                </LinearGradient>
-                <Text style={[s.emptyTitle, { color: colors.textPrimary }]}>Không có dữ liệu</Text>
-                <Text style={[s.emptyT, { color: colors.textMuted }]}>
-                    {searchText ? 'Thử tìm kiếm từ khóa khác' : 'Không có sản lượng trong kỳ này'}
+            <View style={styles.emptyW}>
+                <View style={styles.emptyIcon}>
+                    <Package size={32} color="#14B8A6" />
+                </View>
+                <Text style={[styles.emptyTitle, { color: colors.textPrimary }]}>Không có dữ liệu</Text>
+                <Text style={[styles.emptyT, { color: colors.textMuted }]}>
+                    {searchInputValue ? 'Thử tìm kiếm từ khóa khác' : 'Không có sản lượng trong kỳ này'}
                 </Text>
             </View>
         );
     };
 
-    const ListHeaderComponent = () => (
-        <View style={{ gap: Spacing.sm }}>
-            <Animated.View entering={FadeInDown.duration(400).delay(80)} style={[s.statsRow, { marginTop: Spacing.sm }]}>
-                <View style={s.statCard}>
-                    <View style={s.statInner}>
-                        <View style={[s.statIconWrap, { backgroundColor: 'rgba(245,158,11,0.15)' }]}>
-                            <SquareDashed size={16} color="#F59E0B" />
-                        </View>
-                        <Text style={[s.statV, { color: '#F59E0B' }]} numberOfLines={1} adjustsFontSizeToFit>{totalQty.toLocaleString('vi-VN')}</Text>
-                        <Text style={[s.statL, { color: colors.textMuted }]}>Tổng SP</Text>
-                    </View>
-                </View>
-                <View style={s.statCard}>
-                    <View style={s.statInner}>
-                        <View style={[s.statIconWrap, { backgroundColor: 'rgba(16,185,129,0.15)' }]}>
-                            <CheckCircle size={16} color="#10B981" />
-                        </View>
-                        <Text style={[s.statV, { color: '#10B981' }]}>{verifiedCount}</Text>
-                        <Text style={[s.statL, { color: colors.textMuted }]}>Xác nhận</Text>
-                    </View>
-                </View>
-                <View style={s.statCard}>
-                    <View style={s.statInner}>
-                        <View style={[s.statIconWrap, { backgroundColor: 'rgba(129,140,248,0.15)' }]}>
-                            <Banknote size={16} color="#818CF8" />
-                        </View>
-                        <Text style={[s.statV, { color: '#818CF8', fontSize: 13 }]} numberOfLines={1}>{fmtCurrency(totalSalary)}</Text>
-                        <Text style={[s.statL, { color: colors.textMuted }]}>Lương khoán</Text>
-                    </View>
-                </View>
-            </Animated.View>
-
-            {/* ViewMode toggle: Personal / Team */}
-            {canViewTeam && (
-            <Animated.View entering={FadeInDown.duration(400).delay(100)} style={{ paddingHorizontal: Spacing.xl }}>
-                <View style={s.viewModeToggle}>
-                    <Pressable
-                        style={[s.toggleBtn, viewMode === 'PERSONAL' && s.toggleBtnActive]}
-                        onPress={() => setViewMode('PERSONAL')}
-                    >
-                        <Text style={[s.toggleText, viewMode === 'PERSONAL' && s.toggleTextActive]}>Cá nhân</Text>
-                    </Pressable>
-                    <Pressable
-                        style={[s.toggleBtn, viewMode === 'TEAM' && s.toggleBtnActive]}
-                        onPress={() => {
-                            setViewMode('TEAM');
-                            setSelectedEmployeeId('');
-                        }}
-                    >
-                        <Text style={[s.toggleText, viewMode === 'TEAM' && s.toggleTextActive]}>Đội nhóm</Text>
-                    </Pressable>
-                </View>
-            </Animated.View>
-            )}
-
-            {/* Month Picker */}
-            <Animated.View entering={FadeInDown.duration(400).delay(120)}>
-                <FlatList
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    data={[0, ...MONTHS]}
-                    keyExtractor={(m) => m.toString()}
-                    contentContainerStyle={s.monthContent}
-                    renderItem={({ item: m }) => (
-                        <Pressable
-                            style={[s.monthChip, { borderColor: selectedMonth === m ? '#14B8A6' : colors.cardBorder, backgroundColor: selectedMonth === m ? 'rgba(20,184,166,0.15)' : colors.inputBg }]}
-                            onPress={() => setSelectedMonth(m)}
-                        >
-                            <Text style={[s.monthChipText, { color: selectedMonth === m ? '#14B8A6' : colors.textMuted }]}>{m === 0 ? 'Tất cả' : `T${m}`}</Text>
-                        </Pressable>
-                    )}
-                />
-            </Animated.View>
-
-            {/* Team Tabs */}
-            {isAdmin && teams.length > 0 && (
-                <Animated.View entering={FadeInDown.duration(400).delay(160)}>
-                    <FlatList
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        data={[{ id: '', name: 'Tất cả Team' }, ...teams]}
-                        keyExtractor={(t) => t.id}
-                        contentContainerStyle={s.monthContent}
-                        renderItem={({ item: t }) => (
-                            <Pressable
-                                style={[s.teamChip, { borderColor: selectedTeamId === t.id ? '#818CF8' : colors.cardBorder, backgroundColor: selectedTeamId === t.id ? 'rgba(129,140,248,0.15)' : colors.inputBg }]}
-                                onPress={() => setSelectedTeamId(t.id)}
-                            >
-                                {t.id === '' && <Users size={12} color={selectedTeamId === '' ? '#818CF8' : colors.textMuted} />}
-                                <Text style={[s.teamChipText, { color: selectedTeamId === t.id ? '#818CF8' : colors.textMuted }]}>{t.name}</Text>
-                            </Pressable>
-                        )}
-                    />
-                </Animated.View>
-            )}
-
-            {/* Search + Filter bar — employee filter only for ADMIN */}
-            <Animated.View entering={FadeInDown.duration(400).delay(200)} style={s.searchRow}>
-                {isAdmin && (
-                    <Pressable
-                        onPress={() => setShowEmployeeModal(true)}
-                        style={{ width: 42, height: 42, borderRadius: 14, borderWidth: 1, borderColor: selectedEmployeeId ? '#F59E0B' : colors.cardBorder, backgroundColor: selectedEmployeeId ? 'rgba(245,158,11,0.1)' : colors.inputBg, justifyContent: 'center', alignItems: 'center' }}
-                    >
-                        <User size={18} color={selectedEmployeeId ? '#F59E0B' : colors.textSecondary} />
-                    </Pressable>
-                )}
-                <View style={[s.searchBox, { backgroundColor: colors.inputBg, borderColor: colors.cardBorder }]}>
-                    <Search size={15} color={colors.textMuted} />
-                    <TextInput
-                        style={[s.searchInput, { color: colors.textPrimary }]}
-                        placeholder="Tìm sản phẩm, nhân viên..."
-                        placeholderTextColor={colors.textMuted}
-                        value={searchText}
-                        onChangeText={setSearchText}
-                    />
-                    {searchText.length > 0 && (
-                        <Pressable onPress={() => setSearchText('')}>
-                            <X size={14} color={colors.textMuted} />
-                        </Pressable>
-                    )}
-                </View>
-            </Animated.View>
-
-            {/* Status filter chips */}
-            <Animated.View entering={FadeInDown.duration(400).delay(220)} style={s.statusRow}>
-                {(['all', 'verified', 'pending'] as StatusFilter[]).map(f => {
-                    const label = f === 'all' ? 'Tất cả' : f === 'verified' ? 'Xác nhận' : 'Chờ duyệt';
-                    const active = statusFilter === f;
-                    const color = f === 'verified' ? '#10B981' : f === 'pending' ? '#F59E0B' : '#14B8A6';
-                    return (
-                        <Pressable key={f} onPress={() => setStatusFilter(f)}
-                            style={[s.statusChip, { borderColor: active ? color : colors.cardBorder, backgroundColor: active ? `${color}22` : colors.inputBg }]}>
-                            <Text style={[s.statusChipText, { color: active ? color : colors.textMuted }]}>{label}</Text>
-                        </Pressable>
-                    );
-                })}
-                <View style={{ flex: 1 }} />
-            </Animated.View>
-
-            <View style={{ height: Spacing.sm }} />
-        </View>
-    );
+    // ─── List Header (Filters) — simplified, filters moved outside to prevent focus loss and for correct order
+    const ListHeaderComponent = useCallback(() => <View style={{ height: Spacing.sm }} />, []);
 
     return (
-        <View style={s.root}>
-            <StatusBar style={isDark ? "light" : "dark"} />
+        <View style={styles.root}>
+            <StatusBar style="dark" />
             <LinearGradient colors={colors.gradientColors} style={StyleSheet.absoluteFill} />
 
-            {/* Decorative orbs */}
-            <View style={[s.orb, { top: -50, right: -30, backgroundColor: colors.orbColor, width: 180, height: 180 }]} />
-            <View style={[s.orb, { top: 180, left: -60, backgroundColor: colors.orbColor, width: 150, height: 150 }]} />
-
-            <SafeAreaView style={s.safe} edges={['top']}>
+            <SafeAreaView style={styles.safe} edges={['top']}>
                 {/* Header */}
-                <Animated.View entering={FadeInDown.duration(400)} style={s.header}>
-                    <Pressable style={[s.backBtn, { backgroundColor: colors.inputBg }]} onPress={() => router.back()}>
+                <View style={styles.header}>
+                    <Pressable style={[styles.backBtn, { backgroundColor: colors.inputBg }]} onPress={() => router.back()}>
                         <ChevronLeft size={22} color={colors.textPrimary} />
                     </Pressable>
-                    <View style={s.headerCenter}>
-                        <LinearGradient colors={['#14B8A6', '#34D399']} style={s.headerIcon}>
+                    <View style={styles.headerCenter}>
+                        <View style={styles.headerIcon}>
                             <Package size={18} color="#FFF" strokeWidth={2.5} />
-                        </LinearGradient>
+                        </View>
                         <View>
-                            <Text style={[s.title, { color: colors.textPrimary }]}>Tổng hợp SP</Text>
-                            <Text style={[s.sub, { color: colors.textSecondary }]}>
+                            <Text style={[styles.title, { color: colors.textPrimary }]}>Tổng hợp SP</Text>
+                            <Text style={[styles.sub, { color: colors.textSecondary }]}>
                                 {selectedMonth === 0 ? `Tất cả ${selectedYear}` : fmtMonth(selectedMonth, selectedYear)}
                             </Text>
                         </View>
                     </View>
                     <View style={{ flexDirection: 'row', gap: Spacing.xs }}>
-                        <Pressable style={[s.backBtn, { backgroundColor: colors.inputBg }]} onPress={handleSendZalo}>
+                        <Pressable style={[styles.backBtn, { backgroundColor: colors.inputBg }]} onPress={handleSendZalo}>
                             <Send size={16} color={colors.textSecondary} />
                         </Pressable>
-                        <Pressable style={[s.backBtn, { backgroundColor: colors.inputBg }]} onPress={onRefresh}>
+                        <Pressable style={[styles.backBtn, { backgroundColor: colors.inputBg }]} onPress={onRefresh}>
                             <RefreshCw size={16} color={colors.textSecondary} />
                         </Pressable>
-                    {isAdmin && (
-                            <Pressable style={[s.backBtn, { backgroundColor: colors.inputBg, borderWidth: 1, borderColor: colors.cardBorder }]} onPress={() => setShowVisibilityModal(true)}>
-                                <Settings2 size={16} color={colors.textSecondary} />
+                    </View>
+                </View>
+
+                <View style={{ gap: Spacing.sm, paddingTop: Spacing.sm, zIndex: 20, overflow: 'visible', position: 'relative' }}>
+                    {/* Stats Row — cardview */}
+                    <View style={styles.statsRow}>
+                        <View style={styles.statCard}>
+                            <View style={styles.statInner}>
+                                <View style={[styles.statIconWrap, { backgroundColor: 'rgba(245,158,11,0.15)' }]}>
+                                    <SquareDashed size={16} color="#F59E0B" />
+                                </View>
+                                <Text style={[styles.statV, { color: '#F59E0B' }]} numberOfLines={1}>{totalQty.toLocaleString('vi-VN')}</Text>
+                                <Text style={[styles.statL, { color: colors.textMuted }]}>Tổng SP</Text>
+                            </View>
+                        </View>
+                        <View style={styles.statCard}>
+                            <View style={styles.statInner}>
+                                <View style={[styles.statIconWrap, { backgroundColor: 'rgba(16,185,129,0.15)' }]}>
+                                    <CheckCircle size={16} color="#10B981" />
+                                </View>
+                                <Text style={[styles.statV, { color: '#10B981' }]}>{verifiedCount}</Text>
+                                <Text style={[styles.statL, { color: colors.textMuted }]}>Xác nhận</Text>
+                            </View>
+                        </View>
+                        <View style={styles.statCard}>
+                            <View style={styles.statInner}>
+                                <View style={[styles.statIconWrap, { backgroundColor: 'rgba(129,140,248,0.15)' }]}>
+                                    <Banknote size={16} color="#818CF8" />
+                                </View>
+                                <Text style={[styles.statV, { color: '#818CF8', fontSize: 13 }]} numberOfLines={1}>{fmtCurrency(totalSalary)}</Text>
+                                <Text style={[styles.statL, { color: colors.textMuted }]}>Lương khoán</Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* ViewMode Toggle */}
+                    {canViewTeam && (
+                        <View style={{ paddingHorizontal: Spacing.xl }}>
+                            <View style={styles.viewModeToggle}>
+                                <Pressable
+                                    style={[styles.toggleBtn, viewMode === 'PERSONAL' && styles.toggleBtnActive]}
+                                    onPress={() => setViewMode('PERSONAL')}
+                                >
+                                    <Text style={[styles.toggleText, viewMode === 'PERSONAL' && styles.toggleTextActive]}>Cá nhân</Text>
+                                </Pressable>
+                                <Pressable
+                                    style={[styles.toggleBtn, viewMode === 'TEAM' && styles.toggleBtnActive]}
+                                    onPress={() => {
+                                        setViewMode('TEAM');
+                                        setSelectedEmployeeId('');
+                                    }}
+                                >
+                                    <Text style={[styles.toggleText, viewMode === 'TEAM' && styles.toggleTextActive]}>Đội nhóm</Text>
+                                </Pressable>
+                            </View>
+                        </View>
+                    )}
+
+                    {/* Month Picker — filter thang */}
+                    <FlatList
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        data={[0, ...MONTHS]}
+                        keyExtractor={(m) => m.toString()}
+                        contentContainerStyle={styles.monthContent}
+                        renderItem={({ item: m }) => (
+                            <Pressable
+                                style={[styles.monthChip, { borderColor: selectedMonth === m ? '#14B8A6' : colors.cardBorder, backgroundColor: selectedMonth === m ? 'rgba(20,184,166,0.15)' : colors.inputBg }]}
+                                onPress={() => setSelectedMonth(m)}
+                            >
+                                <Text style={[styles.monthChipText, { color: selectedMonth === m ? '#14B8A6' : colors.textMuted }]}>{m === 0 ? 'Tất cả' : `T${m}`}</Text>
                             </Pressable>
                         )}
+                    />
+
+                    {/* Team filter — autocomplete, below month */}
+                    <View style={{ paddingHorizontal: Spacing.xl, zIndex: 30, overflow: 'visible' }}>
+                        <TeamAutocomplete
+                            teams={teams}
+                            selectedTeamId={selectedTeamId}
+                            onSelect={(id) => {
+                                setSelectedTeamId(id);
+                                if (selectedEmployeeId) {
+                                    const emp = employees.find(e => e.id === selectedEmployeeId);
+                                    if (emp && (emp as any).teamId !== id) setSelectedEmployeeId('');
+                                }
+                            }}
+                            colors={colors}
+                            isOpen={isTeamOpen}
+                            setIsOpen={(v) => {
+                                setIsTeamOpen(v);
+                                if (v) setIsEmployeeOpen(false);
+                            }}
+                        />
                     </View>
-                </Animated.View>
+
+                    {/* Employee filter — autocomplete, filtered by team */}
+                    {viewMode === 'TEAM' && (
+                        <View style={{ paddingHorizontal: Spacing.xl, zIndex: 20, overflow: 'visible' }}>
+                            <EmployeeAutocomplete
+                                employees={selectedTeamId ? employees.filter(e => (e as any).teamId === selectedTeamId) : employees}
+                                selectedEmployeeId={selectedEmployeeId}
+                                onSelect={setSelectedEmployeeId}
+                                colors={colors}
+                                isOpen={isEmployeeOpen}
+                                setIsOpen={(v) => {
+                                    setIsEmployeeOpen(v);
+                                    if (v) setIsTeamOpen(false);
+                                }}
+                            />
+                        </View>
+                    )}
+
+                    {/* Status filter chips — filter trang thai */}
+                    <View style={styles.statusRow}>
+                        {(['all', 'verified', 'pending'] as StatusFilter[]).map(f => {
+                            const label = f === 'all' ? 'Tất cả' : f === 'verified' ? 'Xác nhận' : 'Chờ duyệt';
+                            const active = statusFilter === f;
+                            const color = f === 'verified' ? '#10B981' : f === 'pending' ? '#F59E0B' : '#14B8A6';
+                            return (
+                                <Pressable key={f} onPress={() => setStatusFilter(f)}
+                                    style={[styles.statusChip, { borderColor: active ? color : colors.cardBorder, backgroundColor: active ? `${color}22` : colors.inputBg }]}>
+                                    <Text style={[styles.statusChipText, { color: active ? color : colors.textMuted }]}>{label}</Text>
+                                </Pressable>
+                            );
+                        })}
+                        <View style={{ flex: 1 }} />
+                    </View>
+
+                    {/* Search — below status, outside FlatList to keep focus */}
+                    <View style={styles.searchRow}>
+                        <View style={[styles.searchBox, { backgroundColor: colors.inputBg, borderColor: colors.cardBorder }]}>
+                            <Search size={15} color={colors.textMuted} />
+                            <TextInput
+                                ref={searchInputRef}
+                                style={[styles.searchInput, { color: colors.textPrimary }]}
+                                placeholder="Tìm sản phẩm, nhân viên..."
+                                placeholderTextColor={colors.textMuted}
+                                value={searchInputValue}
+                                onChangeText={handleSearchChange}
+                                returnKeyType="search"
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                autoComplete="off"
+                                spellCheck={false}
+                                onSubmitEditing={() => Keyboard.dismiss()}
+                                onKeyPress={(e) => {
+                                    if (e.nativeEvent.key === 'Enter') {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        Keyboard.dismiss();
+                                    }
+                                }}
+                            />
+                            {searchInputValue.length > 0 && (
+                                <Pressable onPress={() => { handleSearchChange(''); Keyboard.dismiss(); }}>
+                                    <X size={14} color={colors.textMuted} />
+                                </Pressable>
+                            )}
+                        </View>
+                    </View>
+                </View>
 
                 <FlatList
                     data={allOutputs}
@@ -515,218 +788,26 @@ export default function ProductOutputsScreen() {
                     ListHeaderComponent={ListHeaderComponent}
                     ListEmptyComponent={EmptyLayer}
                     ListFooterComponent={Footer}
-                    contentContainerStyle={s.list}
+                    contentContainerStyle={styles.list}
                     showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
                     onEndReached={onEndReached}
                     onEndReachedThreshold={0.5}
                     refreshControl={<RefreshControl refreshing={outputsQuery.isRefetching && !outputsQuery.isFetchingNextPage} onRefresh={onRefresh} tintColor="#14B8A6" />}
                 />
             </SafeAreaView>
             {DialogComponent}
-
-            {/* ── Employee Filter Modal ── */}
-            <Modal visible={showEmployeeModal} transparent animationType="slide" onRequestClose={() => setShowEmployeeModal(false)}>
-                <Pressable style={s.modalOverlay} onPress={() => setShowEmployeeModal(false)}>
-                    <Pressable style={[s.modalSheet, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder, maxHeight: '80%' }]} onPress={e => e.stopPropagation()}>
-                        <View style={[s.modalHandle, { backgroundColor: colors.divider }]} />
-                        <View style={s.modalHeader}>
-                            <View style={{ flex: 1 }}>
-                                <Text style={[s.modalTitle, { color: colors.textPrimary }]}>Lọc theo nhân viên</Text>
-                            </View>
-                            <Pressable onPress={() => setShowEmployeeModal(false)} style={[s.backBtn, { backgroundColor: colors.inputBg }]}>
-                                <X size={16} color={colors.textMuted} />
-                            </Pressable>
-                        </View>
-
-                        <FlatList
-                            data={[{ id: '', fullName: 'Tất cả nhân viên', employeeCode: '' }, ...employees]}
-                            keyExtractor={i => i.id}
-                            contentContainerStyle={{ paddingHorizontal: Spacing.xl, paddingBottom: Spacing.xxl }}
-                            renderItem={({ item }) => (
-                                <Pressable
-                                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: colors.divider }}
-                                    onPress={() => { setSelectedEmployeeId(item.id); setShowEmployeeModal(false); }}
-                                >
-                                    <View style={{ flex: 1 }}>
-                                        <Text style={{ fontSize: FontSizes.base, color: selectedEmployeeId === item.id ? '#F59E0B' : colors.textPrimary, fontWeight: selectedEmployeeId === item.id ? 'bold' : 'normal' }}>{item.fullName}</Text>
-                                        {item.employeeCode ? <Text style={{ fontSize: FontSizes.xs, color: colors.textMuted }}>{item.employeeCode}</Text> : null}
-                                    </View>
-                                    {selectedEmployeeId === item.id && <CheckCircle size={18} color="#F59E0B" />}
-                                </Pressable>
-                            )}
-                        />
-                    </Pressable>
-                </Pressable>
-            </Modal>
-
-
-            {/* ── Team Visibility Modal (Admin only) ── */}
-            <Modal visible={showVisibilityModal} transparent animationType="slide" onRequestClose={() => setShowVisibilityModal(false)}>
-                <Pressable style={s.modalOverlay} onPress={() => setShowVisibilityModal(false)}>
-                    <Pressable style={[s.modalSheet, { backgroundColor: colors.cardBg, borderColor: colors.cardBorder }]} onPress={e => e.stopPropagation()}>
-                        <View style={[s.modalHandle, { backgroundColor: colors.divider }]} />
-
-                        <View style={s.modalHeader}>
-                            <LinearGradient colors={['#818CF8', '#6366F1']} style={s.modalIcon}>
-                                <Settings2 size={18} color="#FFF" />
-                            </LinearGradient>
-                            <View style={{ flex: 1 }}>
-                                <Text style={[s.modalTitle, { color: colors.textPrimary }]}>Cài đặt hiển thị</Text>
-                                <Text style={[s.modalSub, { color: colors.textMuted }]}>Ẩn/hiện sản lượng theo team</Text>
-                            </View>
-                            <Pressable onPress={() => setShowVisibilityModal(false)} style={[s.backBtn, { backgroundColor: colors.inputBg }]}>
-                                <X size={16} color={colors.textMuted} />
-                            </Pressable>
-                        </View>
-
-                        <View style={[s.infoBox, { backgroundColor: 'rgba(129,140,248,0.08)', borderColor: 'rgba(129,140,248,0.2)' }]}>
-                            <Text style={[s.infoText, { color: colors.textSecondary }]}>
-                                Team bị ẩn: nhân viên và manager thuộc team đó sẽ không xem được sản lượng. Admin luôn thấy tất cả.
-                            </Text>
-                        </View>
-
-                        <View style={s.teamChipsGrid}>
-                            {teams.length === 0 ? (
-                                <Text style={[s.infoText, { color: colors.textMuted, textAlign: 'center' }]}>Chưa có team nào</Text>
-                            ) : (
-                                teams.map(team => {
-                                    const visible = team.outputVisible;
-                                    return (
-                                        <Pressable
-                                            key={team.id}
-                                            style={[
-                                                s.visChip,
-                                                {
-                                                    borderColor: visible ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)',
-                                                    backgroundColor: visible ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.08)',
-                                                }
-                                            ]}
-                                            onPress={() => toggleTeamVisibility(team.id, visible)}
-                                            disabled={savingVisibility}
-                                        >
-                                            <LinearGradient
-                                                colors={visible ? ['#10B981', '#34D399'] : ['#EF4444', '#F87171']}
-                                                style={s.visChipIcon}
-                                            >
-                                                {visible ? <Eye size={13} color="#FFF" /> : <EyeOff size={13} color="#FFF" />}
-                                            </LinearGradient>
-                                            <View style={{ flex: 1 }}>
-                                                <Text style={[s.visChipName, { color: colors.textPrimary }]} numberOfLines={1}>{team.name}</Text>
-                                                <Text style={[s.visChipStatus, { color: visible ? '#10B981' : '#EF4444' }]}>
-                                                    {visible ? 'Đang hiển thị' : 'Đang ẩn'}
-                                                </Text>
-                                            </View>
-                                            <View style={[s.visToggle, { backgroundColor: visible ? '#10B981' : colors.inputBg, borderColor: visible ? '#10B981' : colors.cardBorder }]}>
-                                                <View style={[s.visToggleDot, { backgroundColor: visible ? '#FFF' : colors.textMuted, transform: [{ translateX: visible ? 14 : 0 }] }]} />
-                                            </View>
-                                        </Pressable>
-                                    );
-                                })
-                            )}
-                        </View>
-
-                        <View style={[s.modalFooter, { borderTopColor: colors.divider }]}>
-                            <Save size={14} color={colors.textMuted} />
-                            <Text style={[s.infoText, { color: colors.textMuted }]}>Thay đổi được lưu ngay lập tức</Text>
-                        </View>
-                    </Pressable>
-                </Pressable>
-            </Modal>
         </View>
     );
 }
 
-// ── Output Card Component ──
-function OutputCard({ out, i, colors, showEmployee }: { out: ProductOutput; i: number; colors: any; showEmployee: boolean }) {
-    return (
-        <Animated.View entering={FadeInUp.duration(350).delay(Math.min(i, 8) * 40).springify().damping(16)}>
-            <View style={s.card}>
-                <View style={s.cardInner}>
-                    {/* Top: icon + title + status */}
-                    <View style={s.cardTop}>
-                        <LinearGradient
-                            colors={out.verified ? ['#10B981', '#34D399'] : ['#F59E0B', '#FBBF24']}
-                            style={s.cardIconWrap}
-                        >
-                            <Package size={16} color="#FFF" />
-                        </LinearGradient>
-                        <View style={s.cardTitleWrap}>
-                            <Text style={[s.cTitle, { color: colors.textPrimary }]} numberOfLines={1}>
-                                {out.Product?.name || out.productId}
-                            </Text>
-                            {out.Product?.name && (
-                                <Text style={[s.cSub, { color: colors.textSecondary }]} numberOfLines={1}>
-                                    {out.Product?.code || 'Mã SP'}
-                                </Text>
-                            )}
-                        </View>
-                        <View style={[s.statusBadge, { backgroundColor: out.verified ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)' }]}>
-                            {out.verified ? <CheckCircle size={13} color="#34D399" /> : <Clock size={13} color="#FBBF24" />}
-                            <Text style={[s.statusText, { color: out.verified ? '#34D399' : '#FBBF24' }]}>
-                                {out.verified ? 'Xác nhận' : 'Chờ duyệt'}
-                            </Text>
-                        </View>
-                    </View>
-
-                    {/* Meta: employee + date + order */}
-                    <View style={[s.metaRow, { borderTopColor: colors.divider }]}>
-                        {showEmployee && (
-                            <View style={s.metaItem}>
-                                <User size={12} color={colors.textMuted} />
-                                <Text style={[s.metaText, { color: colors.textSecondary }]} numberOfLines={1}>
-                                    {out.Employee?.fullName || out.employeeId}
-                                </Text>
-                            </View>
-                        )}
-                        <View style={s.metaItem}>
-                            <CalendarDays size={12} color={colors.textMuted} />
-                            <Text style={[s.metaText, { color: colors.textSecondary }]}>
-                                {new Date(out.outputDate).toLocaleDateString('vi-VN')}
-                            </Text>
-                        </View>
-                        {out.ProductionOrder && (
-                            <View style={s.metaItem}>
-                                <FileText size={12} color={colors.textMuted} />
-                                <Text style={[s.metaText, { color: '#38BDF8' }]}>
-                                    {out.ProductionOrder.orderNumber}
-                                </Text>
-                            </View>
-                        )}
-                    </View>
-
-                    {/* Detail: qty + salary */}
-                    <View style={[s.detailRow, { borderTopColor: colors.divider }]}>
-                        <View style={s.detItem}>
-                            <Text style={[s.detL, { color: colors.textMuted }]}>Số lượng</Text>
-                            <Text style={[s.detV, { color: '#F59E0B' }]}>{out.quantity || 0} SP</Text>
-                        </View>
-                        <View style={[s.detDivider, { backgroundColor: colors.divider }]} />
-                        <View style={s.detItem}>
-                            <Text style={[s.detL, { color: colors.textMuted }]}>Lương khoán</Text>
-                            <Text style={[s.detV, { color: '#818CF8' }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{fmtCurrency(out.salaryAmount || 0)}</Text>
-                        </View>
-                    </View>
-
-                    {/* Note */}
-                    {out.note && (
-                        <View style={[s.noteWrap, { backgroundColor: 'rgba(0,0,0,0.03)', borderColor: colors.cardBorder }]}>
-                            <Text style={[s.note, { color: colors.textSecondary }]}>{out.note}</Text>
-                        </View>
-                    )}
-                </View>
-            </View>
-        </Animated.View>
-    );
-}
-
-const s = StyleSheet.create({
+const styles = StyleSheet.create({
     root: { flex: 1 },
     safe: { flex: 1 },
-    orb: { position: 'absolute', borderRadius: 999 },
     header: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingHorizontal: Spacing.xl, paddingTop: Spacing.md, paddingBottom: Spacing.sm },
     backBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
     headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-    headerIcon: { width: 38, height: 38, borderRadius: 11, justifyContent: 'center', alignItems: 'center' },
+    headerIcon: { width: 38, height: 38, borderRadius: 11, justifyContent: 'center', alignItems: 'center', backgroundColor: '#14B8A6' },
     title: { fontSize: FontSizes.lg, fontWeight: FontWeights.bold },
     sub: { fontSize: FontSizes.xs, marginTop: 1 },
     statsRow: { flexDirection: 'row', gap: Spacing.sm, paddingHorizontal: Spacing.xl },
@@ -735,9 +816,8 @@ const s = StyleSheet.create({
         borderRadius: 16,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: 'rgba(1, 86, 167, 0.45)',
+        borderColor: 'rgba(20,184,166,0.45)',
         backgroundColor: '#FFFFFF',
-        ...Shadows.small,
     },
     statInner: {
         padding: Spacing.xs,
@@ -748,21 +828,19 @@ const s = StyleSheet.create({
     statV: { fontSize: FontSizes.sm, fontWeight: FontWeights.bold, textAlign: 'center' },
     statL: { fontSize: 10, textAlign: 'center' },
     list: { paddingBottom: 100 },
-    gap: { gap: Spacing.md },
     loadingText: { fontSize: FontSizes.sm, marginTop: 4 },
     emptyW: { alignItems: 'center', paddingVertical: 60, gap: Spacing.md },
-    emptyIcon: { width: 72, height: 72, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+    emptyIcon: { width: 72, height: 72, borderRadius: 22, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(20,184,166,0.15)' },
     emptyTitle: { fontSize: FontSizes.lg, fontWeight: FontWeights.bold },
     emptyT: { fontSize: FontSizes.sm, textAlign: 'center' },
     card: {
-        borderRadius: 20,
+        borderRadius: 16,
         overflow: 'hidden',
         borderWidth: 1,
         marginHorizontal: Spacing.xl,
         marginBottom: Spacing.md,
-        borderColor: 'rgba(1, 86, 167, 0.45)',
+        borderColor: 'rgba(20,184,166,0.3)',
         backgroundColor: '#FFFFFF',
-        ...Shadows.medium,
     },
     cardInner: {
         padding: Spacing.md,
@@ -799,24 +877,29 @@ const s = StyleSheet.create({
     modalSheet: { borderTopLeftRadius: 28, borderTopRightRadius: 28, borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, paddingBottom: 32 },
     modalHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 4 },
     modalHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md },
-    modalIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
     modalTitle: { fontSize: FontSizes.base, fontWeight: FontWeights.bold },
     modalSub: { fontSize: FontSizes.xs, marginTop: 2 },
-    infoBox: { marginHorizontal: Spacing.xl, marginBottom: Spacing.md, padding: Spacing.md, borderRadius: 12, borderWidth: 1 },
-    infoText: { fontSize: FontSizes.xs, lineHeight: 18 },
-    teamChipsGrid: { paddingHorizontal: Spacing.xl, rowGap: Spacing.sm },
-    visChip: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, padding: Spacing.md, borderRadius: 16, borderWidth: 1 },
-    visChipIcon: { width: 32, height: 32, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
-    visChipName: { fontSize: FontSizes.sm, fontWeight: FontWeights.semibold },
-    visChipStatus: { fontSize: 11, marginTop: 2 },
-    visToggle: { width: 36, height: 22, borderRadius: 11, borderWidth: 1.5, justifyContent: 'center', paddingHorizontal: 2 },
-    visToggleDot: { width: 16, height: 16, borderRadius: 8 },
-    modalFooter: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, paddingHorizontal: Spacing.xl, paddingTop: Spacing.md, marginTop: Spacing.md, borderTopWidth: 1 },
-
-    // ViewMode toggle
-    viewModeToggle: { flexDirection: 'row', padding: 3, borderRadius: 20, marginBottom: 4, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB', ...Shadows.small },
+    viewModeToggle: { flexDirection: 'row', padding: 3, borderRadius: 20, marginBottom: 4, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB' },
     toggleBtn: { flex: 1, paddingVertical: 6, alignItems: 'center', borderRadius: 18 },
-    toggleBtnActive: { backgroundColor: '#0156A7' },
+    toggleBtnActive: { backgroundColor: '#14B8A6' },
     toggleText: { fontSize: FontSizes.sm, fontWeight: FontWeights.semibold, color: '#6B7280' },
     toggleTextActive: { color: '#FFFFFF' },
-});
+
+    // Employee Autocomplete
+    employeeAutocomplete: { flex: 1, maxWidth: 120 },
+    autocompleteTrigger: {
+        width: 42, height: 42, borderRadius: 14, borderWidth: 1,
+        justifyContent: 'center', alignItems: 'center', flexDirection: 'row',
+    },
+    dropdownArrow: { marginLeft: 2 },
+    dropdownOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1001, elevation: 10 },
+    dropdown: {
+        position: 'absolute', top: 46, left: 0, right: 0, zIndex: 1005, elevation: 12,
+        borderRadius: 12, borderWidth: 1, overflow: 'hidden', maxHeight: 380, backgroundColor: '#FFFFFF',
+        boxShadow: '0px 8px 24px rgba(0,0,0,0.15)',
+    },
+    dropdownSearch: {
+        paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
+        fontSize: FontSizes.sm, borderBottomWidth: 1,
+    },
+},);

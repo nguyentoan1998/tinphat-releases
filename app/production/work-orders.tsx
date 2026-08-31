@@ -225,12 +225,12 @@ export default function WorkOrdersScreen() {
                                                         <Text style={[s.iL, { color: colors.textMuted }]}>SL kế hoạch</Text>
                                                         <Text style={[s.iV, { color: colors.textPrimary }]}>{Number(o.quantity)}</Text>
                                                     </View>
-                                                    {o.startDate && (
+                                                    {o.startDate ? (
                                                         <View style={s.infoR}>
                                                             <Text style={[s.iL, { color: colors.textMuted }]}>Bắt đầu</Text>
                                                             <Text style={[s.iV, { color: colors.textPrimary }]}>{fmtDate(o.startDate)}</Text>
                                                         </View>
-                                                    )}
+                                                    ) : null}
                                                 </View>
                                             </View>
                                         </GlassListCard>
@@ -298,7 +298,7 @@ export default function WorkOrdersScreen() {
                                             <View style={mdS.infoText}>
                                                 <Text style={[mdS.infoLabel, { color: colors.textMuted }]}>{label}</Text>
                                                 <Text style={[mdS.infoValue, { color: colors.textPrimary }]}>{value}</Text>
-                                                {sub && <Text style={[mdS.infoSub, { color: colors.textMuted }]}>{sub}</Text>}
+                                                {sub ? <Text style={[mdS.infoSub, { color: colors.textMuted }]}>{sub}</Text> : null}
                                             </View>
                                         </View>
                                     </View>

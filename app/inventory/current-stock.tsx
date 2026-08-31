@@ -14,6 +14,7 @@ import { useThemeStore } from '@/store';
 import { ThemeColors } from '@/constants/ThemeColors';
 import { useDarkDialog } from '@/components/ui/DarkDialog';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import PaginationFooter from '@/components/ui/PaginationFooter';
 
 const fmtCurrency = (n: number) => n.toLocaleString('vi-VN') + 'đ';
 
@@ -287,15 +288,13 @@ export default function CurrentStockScreen() {
                         onEndReached={onEndReached}
                         onEndReachedThreshold={0.4}
                         ListFooterComponent={
-                            <View style={{ paddingVertical: 18 }}>
-                                {stockQuery.isFetchingNextPage ? (
-                                    <Text style={[s.loadingMoreText, { color: colors.textMuted }]}>Đang tải thêm...</Text>
-                                ) : stockQuery.hasNextPage ? (
-                                    <Text style={[s.loadingMoreText, { color: colors.textMuted }]}>Kéo để tải thêm</Text>
-                                ) : (
-                                    <View style={{ height: 70 }} />
-                                )}
-                            </View>
+                            <PaginationFooter
+                                hasNextPage={!!stockQuery.hasNextPage}
+                                isFetchingNextPage={stockQuery.isFetchingNextPage}
+                                loadedCount={filtered.length}
+                                onLoadMore={onEndReached}
+                                accentColor="#10B981"
+                            />
                         }
                     />
                 )}

@@ -124,7 +124,7 @@ export default function EmployeeViewModal({ visible, employee, onClose, onEdit, 
                             <View style={[s.sectionInner, { backgroundColor: colors.cardBg }]}>
                                 <Text style={[s.sectionTitle, { color: colors.textSecondary }]}>Liên hệ</Text>
                                 <InfoRow Icon={Phone} label="Số điện thoại" value={employee.phone || '—'} accent="#10B981" />
-                                {employee.User?.email && <InfoRow Icon={Mail} label="Email" value={employee.User.email} accent="#3B82F6" />}
+                                {employee.User?.email ? <InfoRow Icon={Mail} label="Email" value={employee.User.email} accent="#3B82F6" /> : null}
                                 <InfoRow Icon={MapPin} label="Địa chỉ" value={employee.address || '—'} accent="#F59E0B" />
                             </View>
                         </Animated.View>
@@ -150,18 +150,18 @@ export default function EmployeeViewModal({ visible, employee, onClose, onEdit, 
                                 <InfoRow Icon={CreditCard} label="Số CCCD" value={employee.nationalId || '—'} accent="#F97316" />
                                 {employee.idCardImages && (
                                     <View style={s.idImagesRow}>
-                                        {employee.idCardImages.front && (
+                                        {employee.idCardImages.front ? (
                                             <View style={s.idImgWrap}>
                                                 <Image source={{ uri: employee.idCardImages.front }} style={[s.idImg, { borderColor: colors.cardBorder }]} />
                                                 <Text style={[s.idImgLabel, { color: colors.textMuted }]}>Mặt trước</Text>
                                             </View>
-                                        )}
-                                        {employee.idCardImages.back && (
+                                        ) : null}
+                                        {employee.idCardImages.back ? (
                                             <View style={s.idImgWrap}>
                                                 <Image source={{ uri: employee.idCardImages.back }} style={[s.idImg, { borderColor: colors.cardBorder }]} />
                                                 <Text style={[s.idImgLabel, { color: colors.textMuted }]}>Mặt sau</Text>
                                             </View>
-                                        )}
+                                        ) : null}
                                     </View>
                                 )}
                             </View>
@@ -171,14 +171,14 @@ export default function EmployeeViewModal({ visible, employee, onClose, onEdit, 
                     </ScrollView>
 
                     {/* Call Button at Bottom */}
-                    {employee.phone && (
+                    {employee.phone ? (
                         <View style={[s.callBar, { borderTopColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)' }]}>
                             <Pressable style={s.callBtn} onPress={handleCall}>
                                 <PhoneCall size={20} color="#FFFFFF" />
                                 <Text style={s.callBtnText}>Gọi {employee.phone}</Text>
                             </Pressable>
                         </View>
-                    )}
+                    ) : null}
                 </Animated.View>
             </View>
         </Modal>

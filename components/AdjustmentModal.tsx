@@ -248,7 +248,7 @@ export default function AdjustmentModal({
                             /* ====== VIEW MODE ====== */
                             <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
                                 {/* ID */}
-                                {adjustment?.id && (
+                                {adjustment?.id ? (
                                     <View style={s.field}>
                                         <View style={s.labelRow}>
                                             <SlidersHorizontal size={14} color={colors.textMuted} />
@@ -260,10 +260,10 @@ export default function AdjustmentModal({
                                             </Text>
                                         </View>
                                     </View>
-                                )}
+                                ) : null}
 
                                 {/* Created at */}
-                                {adjustment?.createdAt && (
+                                {adjustment?.createdAt ? (
                                     <View style={s.field}>
                                         <View style={s.labelRow}>
                                             <Calendar size={14} color={colors.textMuted} />
@@ -275,7 +275,7 @@ export default function AdjustmentModal({
                                             </Text>
                                         </View>
                                     </View>
-                                )}
+                                ) : null}
 
                                 {/* Warehouse */}
                                 <View style={s.field}>
